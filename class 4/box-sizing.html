@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Box-Sizing: border-box vs content-box</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Segoe UI",
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #38bdf8, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.25rem;
+      }
+
+      .subtitle {
+        color: #94a3b8;
+        margin-bottom: 2rem;
+        font-size: 1.05rem;
+        text-align: center;
+      }
+
+      .subtitle code {
+        background: #1e293b;
+        padding: 0.15em 0.5em;
+        border-radius: 4px;
+        font-size: 0.95em;
+        color: #facc15;
+      }
+
+      /* ── Controls ── */
+      .controls {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        padding: 1.75rem 2.5rem;
+        width: 100%;
+        max-width: 520px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+      }
+
+      .declared-size-info {
+        text-align: center;
+        font-size: 0.85rem;
+        color: #64748b;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 1rem;
+      }
+
+      .declared-size-info span {
+        color: #facc15;
+        font-weight: 700;
+        font-size: 1rem;
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+      }
+
+      .control-group label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .control-group .value-display {
+        font-size: 0.85rem;
+        color: #38bdf8;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #334155;
+        outline: none;
+        cursor: pointer;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #38bdf8;
+        border: 2px solid #0f172a;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+        transition: transform 0.15s;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.25);
+      }
+
+      /* ── Comparison ── */
+      .comparison {
+        display: flex;
+        gap: 3rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        max-width: 960px;
+      }
+
+      .demo-panel {
+        flex: 1 1 360px;
+        max-width: 440px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .panel-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+      }
+
+      .badge {
+        font-size: 0.6rem;
+        padding: 0.2em 0.6em;
+        border-radius: 999px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .badge.content {
+        background: #7c3aed33;
+        color: #a78bfa;
+        border: 1px solid #7c3aed55;
+      }
+      .badge.border {
+        background: #05966933;
+        color: #34d399;
+        border: 1px solid #05966955;
+      }
+
+      /* ── Box Visualization ── */
+      .box-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 340px;
+        width: 100%;
+      }
+
+      /* Dashed declared-size outline */
+      .declared-outline {
+        position: absolute;
+        border: 2px dashed #fbbf2488;
+        border-radius: 4px;
+        pointer-events: none;
+        transition: all 0.35s ease;
+      }
+
+      .declared-label {
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.6rem;
+        color: #facc15;
+        white-space: nowrap;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      /* Layers */
+      .layer-border {
+        transition: all 0.35s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+      }
+
+      .layer-padding {
+        transition: all 0.35s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      .layer-content {
+        transition: all 0.35s ease;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.4;
+      }
+
+      /* Colors – content-box (purple) */
+      .demo-panel.content-box .layer-border {
+        background: #7c3aed;
+      }
+      .demo-panel.content-box .layer-padding {
+        background: #a78bfa44;
+      }
+      .demo-panel.content-box .layer-content {
+        background: #c4b5fd;
+        color: #1e1b4b;
+      }
+
+      /* Colors – border-box (green) */
+      .demo-panel.border-box .layer-border {
+        background: #059669;
+      }
+      .demo-panel.border-box .layer-padding {
+        background: #34d39944;
+      }
+      .demo-panel.border-box .layer-content {
+        background: #6ee7b7;
+        color: #022c22;
+      }
+
+      /* ── Readout ── */
+      .readout {
+        margin-top: 1.25rem;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        width: 100%;
+        font-size: 0.82rem;
+        line-height: 1.9;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .readout .row {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .readout .label {
+        color: #94a3b8;
+      }
+      .readout .val {
+        font-weight: 700;
+      }
+
+      .readout .total {
+        border-top: 1px solid #334155;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        font-weight: 800;
+        font-size: 0.95rem;
+      }
+
+      .highlight-grow {
+        color: #f87171;
+      }
+      .highlight-same {
+        color: #34d399;
+      }
+
+      /* ── Bar Chart ── */
+      .size-bar-wrapper {
+        margin-top: 2.5rem;
+        width: 100%;
+        max-width: 600px;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 14px;
+        padding: 1.5rem 2rem;
+      }
+
+      .size-bar-wrapper h3 {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 1.25rem;
+        text-align: center;
+      }
+
+      .bar-group {
+        margin-bottom: 0.85rem;
+      }
+      .bar-group:last-child {
+        margin-bottom: 0;
+      }
+
+      .bar-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .bar-track {
+        height: 28px;
+        background: #0f172a;
+        border-radius: 6px;
+        overflow: visible;
+        position: relative;
+      }
+
+      .bar-fill {
+        height: 100%;
+        border-radius: 6px;
+        transition: width 0.4s ease;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 10px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        min-width: 40px;
+      }
+
+      .bar-fill.content-bar {
+        background: linear-gradient(90deg, #7c3aed, #a78bfa);
+        color: #fff;
+      }
+
+      .bar-fill.border-bar {
+        background: linear-gradient(90deg, #059669, #34d399);
+        color: #022c22;
+      }
+
+      .declared-marker {
+        position: absolute;
+        top: -4px;
+        height: calc(100% + 8px);
+        width: 2px;
+        background: #facc15;
+        z-index: 2;
+        transition: left 0.4s ease;
+        border-radius: 1px;
+      }
+
+      .declared-marker::after {
+        content: "set width";
+        position: absolute;
+        top: -18px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.55rem;
+        color: #facc15;
+        white-space: nowrap;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* ── Formulas ── */
+      .formula-bar {
+        margin-top: 2rem;
+        width: 100%;
+        max-width: 600px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .formula-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+      }
+
+      .formula-card h4 {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.6rem;
+      }
+
+      .formula-card.content-formula h4 {
+        color: #a78bfa;
+      }
+      .formula-card.border-formula h4 {
+        color: #34d399;
+      }
+
+      .formula-card code {
+        font-family: "Fira Code", "Cascadia Code", monospace;
+        font-size: 0.72rem;
+        line-height: 1.8;
+        display: block;
+        color: #cbd5e1;
+      }
+
+      code .op {
+        color: #94a3b8;
+      }
+      code .num {
+        color: #38bdf8;
+        font-weight: 700;
+      }
+      code .res {
+        color: #facc15;
+        font-weight: 800;
+      }
+
+      /* ── Legend ── */
+      .legend {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+
+      .legend-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+      }
+
+      @media (max-width: 800px) {
+        .comparison {
+          gap: 2rem;
+        }
+        .formula-bar {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>📦 box-sizing Visualizer</h1>
+    <p class="subtitle">
+      Both boxes declare <code>width: 200px; height: 200px</code> — watch what
+      happens
+    </p>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="declared-size-info">
+        Declared size for both boxes: <span>200 × 200 px</span>
+      </div>
+      <div class="control-group">
+        <label>
+          Padding (all sides)
+          <span class="value-display" id="paddingVal">20px</span>
+        </label>
+        <input
+          type="range"
+          id="paddingRange"
+          min="0"
+          max="60"
+          value="20"
+          step="2"
+        />
+      </div>
+      <div class="control-group">
+        <label>
+          Border Width (all sides)
+          <span class="value-display" id="borderVal">5px</span>
+        </label>
+        <input
+          type="range"
+          id="borderRange"
+          min="0"
+          max="30"
+          value="5"
+          step="1"
+        />
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-swatch" style="border: 2px dashed #fbbf24"></div>
+        Declared 200×200
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #7c3aed"></div>
+        Border
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #a78bfa55"></div>
+        Padding
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background: #c4b5fd"></div>
+        Content
+      </div>
+    </div>
+
+    <!-- Boxes -->
+    <div class="comparison" style="margin-top: 1.5rem">
+      <!-- content-box -->
+      <div class="demo-panel content-box">
+        <div class="panel-header">
+          <span class="panel-title">content-box</span>
+          <span class="badge content">default</span>
+        </div>
+        <div class="box-wrapper">
+          <div class="declared-outline" id="cbDeclared">
+            <span class="declared-label">200 × 200</span>
+          </div>
+          <div class="layer-border" id="cbBorder">
+            <div class="layer-padding" id="cbPadding">
+              <div class="layer-content" id="cbContent">Content</div>
+            </div>
+          </div>
+        </div>
+        <div class="readout" id="cbReadout"></div>
+      </div>
+
+      <!-- border-box -->
+      <div class="demo-panel border-box">
+        <div class="panel-header">
+          <span class="panel-title">border-box</span>
+          <span class="badge border">recommended</span>
+        </div>
+        <div class="box-wrapper">
+          <div class="declared-outline" id="bbDeclared">
+            <span class="declared-label">200 × 200</span>
+          </div>
+          <div class="layer-border" id="bbBorder">
+            <div class="layer-padding" id="bbPadding">
+              <div class="layer-content" id="bbContent">Content</div>
+            </div>
+          </div>
+        </div>
+        <div class="readout" id="bbReadout"></div>
+      </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="size-bar-wrapper">
+      <h3>Total Rendered Width</h3>
+      <div class="bar-group">
+        <div class="bar-label">
+          <span style="color: #a78bfa">content-box</span>
+          <span style="color: #a78bfa" id="cbBarVal"></span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill content-bar" id="cbBar"></div>
+          <div class="declared-marker" id="cbMarker"></div>
+        </div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-label">
+          <span style="color: #34d399">border-box</span>
+          <span style="color: #34d399" id="bbBarVal"></span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill border-bar" id="bbBar"></div>
+          <div class="declared-marker" id="bbMarker"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulas -->
+    <div class="formula-bar">
+      <div class="formula-card content-formula">
+        <h4>content-box total width</h4>
+        <code id="cbFormula"></code>
+      </div>
+      <div class="formula-card border-formula">
+        <h4>border-box total width</h4>
+        <code id="bbFormula"></code>
+      </div>
+    </div>
+
+    <script>
+      const SIZE = 200;
+
+      const paddingRange = document.getElementById("paddingRange");
+      const borderRange = document.getElementById("borderRange");
+      const paddingVal = document.getElementById("paddingVal");
+      const borderVal = document.getElementById("borderVal");
+
+      const cbBorder = document.getElementById("cbBorder");
+      const cbPadding = document.getElementById("cbPadding");
+      const cbContent = document.getElementById("cbContent");
+      const cbDeclared = document.getElementById("cbDeclared");
+      const cbReadout = document.getElementById("cbReadout");
+
+      const bbBorder = document.getElementById("bbBorder");
+      const bbPadding = document.getElementById("bbPadding");
+      const bbContent = document.getElementById("bbContent");
+      const bbDeclared = document.getElementById("bbDeclared");
+      const bbReadout = document.getElementById("bbReadout");
+
+      const cbBar = document.getElementById("cbBar");
+      const bbBar = document.getElementById("bbBar");
+      const cbBarVal = document.getElementById("cbBarVal");
+      const bbBarVal = document.getElementById("bbBarVal");
+      const cbMarker = document.getElementById("cbMarker");
+      const bbMarker = document.getElementById("bbMarker");
+
+      const cbFormula = document.getElementById("cbFormula");
+      const bbFormula = document.getElementById("bbFormula");
+
+      function update() {
+        const p = parseInt(paddingRange.value);
+        const b = parseInt(borderRange.value);
+
+        paddingVal.textContent = p + "px";
+        borderVal.textContent = b + "px";
+
+        // ── content-box: width/height = content only ──
+        const cbContentSize = SIZE;
+        const cbTotal = SIZE + p * 2 + b * 2;
+
+        // ── border-box: width/height = border edge ──
+        const bbTotal = SIZE;
+        const bbContentSize = Math.max(0, SIZE - p * 2 - b * 2);
+
+        // ── Render content-box ──
+        cbBorder.style.width = cbTotal + "px";
+        cbBorder.style.height = cbTotal + "px";
+        cbBorder.style.padding = b + "px";
+        cbPadding.style.padding = p + "px";
+        cbContent.style.width = cbContentSize + "px";
+        cbContent.style.height = cbContentSize + "px";
+        cbContent.textContent = cbContentSize + " × " + cbContentSize;
+
+        // Declared outline matches content area
+        cbDeclared.style.width = SIZE + "px";
+        cbDeclared.style.height = SIZE + "px";
+
+        // ── Render border-box ──
+        bbBorder.style.width = bbTotal + "px";
+        bbBorder.style.height = bbTotal + "px";
+        bbBorder.style.padding = b + "px";
+        bbPadding.style.padding = p + "px";
+        bbContent.style.width = bbContentSize + "px";
+        bbContent.style.height = bbContentSize + "px";
+        bbContent.textContent =
+          bbContentSize > 0
+            ? bbContentSize + " × " + bbContentSize
+            : "No space!";
+
+        // Declared outline matches outer border edge
+        bbDeclared.style.width = SIZE + "px";
+        bbDeclared.style.height = SIZE + "px";
+
+        // ── Readouts ──
+        const grew = cbTotal > SIZE;
+        cbReadout.innerHTML = `
+            <div class="row"><span class="label">Content area</span><span class="val">${cbContentSize} × ${cbContentSize}px</span></div>
+            <div class="row"><span class="label">+ Padding (${p} × 2)</span><span class="val">+${p * 2}px</span></div>
+            <div class="row"><span class="label">+ Border (${b} × 2)</span><span class="val">+${b * 2}px</span></div>
+            <div class="row total">
+                <span class="label">Rendered size</span>
+                <span class="val ${grew ? "highlight-grow" : "highlight-same"}">
+                    ${cbTotal} × ${cbTotal}px ${grew ? "⚠️ GREW!" : ""}
+                </span>
+            </div>
+        `;
+
+        bbReadout.innerHTML = `
+            <div class="row"><span class="label">Rendered size</span><span class="val highlight-same">${bbTotal} × ${bbTotal}px ✅</span></div>
+            <div class="row"><span class="label">− Border (${b} × 2)</span><span class="val">−${b * 2}px</span></div>
+            <div class="row"><span class="label">− Padding (${p} × 2)</span><span class="val">−${p * 2}px</span></div>
+            <div class="row total">
+                <span class="label">Content area</span>
+                <span class="val" style="color:${bbContentSize > 0 ? "#38bdf8" : "#f87171"}">
+                    ${bbContentSize} × ${bbContentSize}px ${bbContentSize === 0 ? "⚠️ Squeezed!" : ""}
+                </span>
+            </div>
+        `;
+
+        // ── Bars ──
+        const maxBar = Math.max(cbTotal, SIZE) + 50;
+        cbBar.style.width = (cbTotal / maxBar) * 100 + "%";
+        bbBar.style.width = (bbTotal / maxBar) * 100 + "%";
+        cbBarVal.textContent = cbTotal + "px total";
+        bbBarVal.textContent = bbTotal + "px total";
+
+        const marker = (SIZE / maxBar) * 100;
+        cbMarker.style.left = marker + "%";
+        bbMarker.style.left = marker + "%";
+
+        // ── Formulas ──
+        cbFormula.innerHTML = `
+            <span class="num">${SIZE}</span> <span class="op">+</span> <span class="num">${p}×2</span> <span class="op">+</span> <span class="num">${b}×2</span><br>
+            <span class="op">= </span><span class="res">${cbTotal}px</span>
+        `;
+
+        bbFormula.innerHTML = `
+            <span class="op">Always = declared =</span> <span class="res">${SIZE}px</span><br>
+            <span class="op">Content: </span><span class="num">${SIZE}</span> <span class="op">−</span> <span class="num">${p}×2</span> <span class="op">−</span> <span class="num">${b}×2</span> <span class="op">=</span> <span class="res">${bbContentSize}px</span>
+        `;
+      }
+
+      paddingRange.addEventListener("input", update);
+      borderRange.addEventListener("input", update);
+
+      update();
+    </script>
+  </body>
+</html>
