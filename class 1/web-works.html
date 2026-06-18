@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How the Web Works - Visual Simulator</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f8faff;
+        --surface: #ffffff;
+        --surface-alt: #f1f5fe;
+        --text: #1e293b;
+        --text-muted: #64748b;
+        --text-light: #94a3b8;
+        --border: #e2e8f0;
+        --browser: #4f46e5;
+        --browser-light: #eef2ff;
+        --browser-glow: rgba(79, 70, 229, 0.15);
+        --dns: #7c3aed;
+        --dns-light: #f5f3ff;
+        --dns-glow: rgba(124, 58, 237, 0.15);
+        --server: #0891b2;
+        --server-light: #ecfeff;
+        --server-glow: rgba(8, 145, 178, 0.15);
+        --success: #059669;
+        --success-light: #ecfdf5;
+        --amber: #d97706;
+        --amber-light: #fffbeb;
+        --pink: #ec4899;
+        --radius: 16px;
+        --radius-sm: 10px;
+        --shadow-sm:
+          0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+        --shadow-md:
+          0 4px 12px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04);
+        --shadow-lg:
+          0 10px 30px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 24px 20px 40px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 28px;
+      }
+
+      header h1 {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        background: linear-gradient(
+          135deg,
+          var(--browser),
+          var(--dns),
+          var(--server)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 6px;
+      }
+
+      header p {
+        font-size: 14px;
+        color: var(--text-muted);
+        font-weight: 400;
+      }
+
+      .phases {
+        display: flex;
+        gap: 4px;
+        margin-bottom: 16px;
+      }
+
+      .phase {
+        flex: 1;
+        position: relative;
+        padding: 10px 6px;
+        text-align: center;
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        border: 1.5px solid var(--border);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        overflow: hidden;
+      }
+
+      .phase::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .phase.active {
+        border-color: var(--browser);
+        box-shadow: 0 0 0 3px var(--browser-glow);
+      }
+      .phase.active::before {
+        opacity: 1;
+      }
+      .phase.active[data-p="0"],
+      .phase.active[data-p="1"] {
+        border-color: var(--dns);
+        box-shadow: 0 0 0 3px var(--dns-glow);
+      }
+      .phase.active[data-p="2"] {
+        border-color: var(--browser);
+        box-shadow: 0 0 0 3px var(--browser-glow);
+      }
+      .phase.active[data-p="3"] {
+        border-color: var(--amber);
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+      }
+      .phase.active[data-p="4"] {
+        border-color: var(--success);
+        box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.12);
+      }
+
+      .phase.done {
+        border-color: var(--success);
+        background: var(--success-light);
+      }
+
+      .phase-num {
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--text-light);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+      }
+
+      .phase.active .phase-num {
+        color: var(--browser);
+      }
+      .phase.active[data-p="0"] .phase-num,
+      .phase.active[data-p="1"] .phase-num {
+        color: var(--dns);
+      }
+      .phase.active[data-p="3"] .phase-num {
+        color: var(--amber);
+      }
+      .phase.active[data-p="4"] .phase-num {
+        color: var(--success);
+      }
+      .phase.done .phase-num {
+        color: var(--success);
+      }
+
+      .phase-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .canvas-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        border: 1.5px solid var(--border);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .canvas-inner {
+        position: relative;
+        width: 100%;
+        height: 320px;
+        background: linear-gradient(
+          180deg,
+          #f8faff 0%,
+          #eef2ff 50%,
+          #f0f9ff 100%
+        );
+      }
+
+      .canvas-inner svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .device-label {
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .device-sublabel {
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 400;
+        font-size: 9px;
+      }
+
+      .wire {
+        stroke-width: 2;
+        stroke-linecap: round;
+        fill: none;
+        opacity: 0.12;
+      }
+
+      .wire-active {
+        opacity: 0.35;
+        stroke-dasharray: 6 4;
+        animation: dash 1.2s linear infinite;
+      }
+
+      @keyframes dash {
+        to {
+          stroke-dashoffset: -20;
+        }
+      }
+
+      @keyframes packetPulse {
+        0%,
+        100% {
+          r: 6;
+          opacity: 0.95;
+        }
+        50% {
+          r: 8;
+          opacity: 1;
+        }
+      }
+
+      .packet-ring {
+        animation: packetPulse 0.6s ease-in-out infinite;
+      }
+
+      .callout-bubble {
+        position: absolute;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        font-family: "JetBrains Mono", monospace;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+        transform: translateY(4px);
+        z-index: 10;
+        box-shadow: var(--shadow-md);
+      }
+
+      .callout-bubble.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: var(--surface-alt);
+        border-top: 1px solid var(--border);
+      }
+
+      .ctrl-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        font-size: 12px;
+        font-weight: 600;
+        font-family: "Inter", sans-serif;
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+      }
+
+      .ctrl-btn:hover {
+        border-color: var(--browser);
+        color: var(--browser);
+        background: var(--browser-light);
+      }
+      .ctrl-btn:active {
+        transform: scale(0.97);
+      }
+      .ctrl-btn:disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
+      .ctrl-btn.primary {
+        background: var(--browser);
+        color: white;
+        border-color: var(--browser);
+      }
+      .ctrl-btn.primary:hover {
+        background: #4338ca;
+      }
+
+      .ctrl-btn svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .progress-dots {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        margin-left: auto;
+      }
+
+      .pdot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--border);
+        cursor: pointer;
+        transition: all 0.25s;
+      }
+
+      .pdot:hover {
+        background: var(--text-light);
+        transform: scale(1.3);
+      }
+      .pdot.active {
+        background: var(--browser);
+        transform: scale(1.4);
+        box-shadow: 0 0 0 3px var(--browser-glow);
+      }
+      .pdot.done {
+        background: var(--success);
+      }
+
+      .step-counter {
+        font-size: 12px;
+        color: var(--text-light);
+        font-weight: 600;
+        min-width: 44px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .info-panel {
+        margin-top: 16px;
+        background: var(--surface);
+        border-radius: var(--radius);
+        border: 1.5px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        padding: 20px 24px;
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        animation: slideUp 0.3s ease;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .info-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 20px;
+      }
+
+      .info-badge.phase-0,
+      .info-badge.phase-1 {
+        background: var(--dns-light);
+        color: var(--dns);
+      }
+      .info-badge.phase-2 {
+        background: var(--browser-light);
+        color: var(--browser);
+      }
+      .info-badge.phase-3 {
+        background: var(--amber-light);
+        color: var(--amber);
+      }
+      .info-badge.phase-4 {
+        background: var(--success-light);
+        color: var(--success);
+      }
+
+      .info-body {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .info-eyebrow {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-light);
+        margin-bottom: 4px;
+      }
+
+      .info-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 6px;
+        line-height: 1.3;
+      }
+
+      .info-desc {
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.65;
+        margin-bottom: 10px;
+      }
+
+      .info-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .tag {
+        padding: 3px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .tag-indigo {
+        background: var(--browser-light);
+        color: var(--browser);
+      }
+      .tag-violet {
+        background: var(--dns-light);
+        color: var(--dns);
+      }
+      .tag-teal {
+        background: var(--server-light);
+        color: var(--server);
+      }
+      .tag-green {
+        background: var(--success-light);
+        color: var(--success);
+      }
+      .tag-amber {
+        background: var(--amber-light);
+        color: var(--amber);
+      }
+
+      .tag-deep {
+        border: 1.5px solid var(--browser);
+        color: var(--browser);
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .tag-deep:hover {
+        background: var(--browser-light);
+      }
+
+      @media (max-width: 640px) {
+        .container {
+          padding: 16px 12px 32px;
+        }
+        header h1 {
+          font-size: 22px;
+        }
+        .phases {
+          gap: 3px;
+        }
+        .phase {
+          padding: 8px 4px;
+        }
+        .phase-name {
+          font-size: 10px;
+        }
+        .canvas-inner {
+          height: 260px;
+        }
+        .info-panel {
+          padding: 16px;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .controls {
+          flex-wrap: wrap;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .wire-active {
+          animation: none;
+        }
+        .packet-ring {
+          animation: none;
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 1;
+            transform: none;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>How the Web Works</h1>
+        <p>What happens between typing a URL and seeing a page</p>
+      </header>
+
+      <div class="phases" id="phases"></div>
+
+      <div class="canvas-card">
+        <div class="canvas-inner" id="scene">
+          <svg
+            id="net"
+            viewBox="0 0 860 320"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              <filter
+                id="glow-indigo"
+                x="-50%"
+                y="-50%"
+                width="200%"
+                height="200%"
+              >
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feFlood
+                  flood-color="#4F46E5"
+                  flood-opacity="0.25"
+                  result="color"
+                />
+                <feComposite
+                  in="color"
+                  in2="blur"
+                  operator="in"
+                  result="shadow"
+                />
+                <feMerge>
+                  <feMergeNode in="shadow" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter
+                id="glow-violet"
+                x="-50%"
+                y="-50%"
+                width="200%"
+                height="200%"
+              >
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feFlood
+                  flood-color="#7C3AED"
+                  flood-opacity="0.25"
+                  result="color"
+                />
+                <feComposite
+                  in="color"
+                  in2="blur"
+                  operator="in"
+                  result="shadow"
+                />
+                <feMerge>
+                  <feMergeNode in="shadow" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter
+                id="glow-teal"
+                x="-50%"
+                y="-50%"
+                width="200%"
+                height="200%"
+              >
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feFlood
+                  flood-color="#0891B2"
+                  flood-opacity="0.25"
+                  result="color"
+                />
+                <feComposite
+                  in="color"
+                  in2="blur"
+                  operator="in"
+                  result="shadow"
+                />
+                <feMerge>
+                  <feMergeNode in="shadow" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter
+                id="glow-green"
+                x="-50%"
+                y="-50%"
+                width="200%"
+                height="200%"
+              >
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feFlood
+                  flood-color="#059669"
+                  flood-opacity="0.25"
+                  result="color"
+                />
+                <feComposite
+                  in="color"
+                  in2="blur"
+                  operator="in"
+                  result="shadow"
+                />
+                <feMerge>
+                  <feMergeNode in="shadow" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <filter
+                id="glow-amber"
+                x="-50%"
+                y="-50%"
+                width="200%"
+                height="200%"
+              >
+                <feGaussianBlur stdDeviation="6" result="blur" />
+                <feFlood
+                  flood-color="#D97706"
+                  flood-opacity="0.25"
+                  result="color"
+                />
+                <feComposite
+                  in="color"
+                  in2="blur"
+                  operator="in"
+                  result="shadow"
+                />
+                <feMerge>
+                  <feMergeNode in="shadow" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <!-- Wires -->
+            <path
+              id="wire-b2d"
+              class="wire"
+              stroke="#7C3AED"
+              d="M195 140 C280 80, 340 60, 430 80"
+            />
+            <path
+              id="wire-d2b"
+              class="wire"
+              stroke="#059669"
+              d="M430 80 C340 60, 280 80, 195 140"
+              opacity="0"
+            />
+            <path
+              id="wire-b2s"
+              class="wire"
+              stroke="#4F46E5"
+              d="M195 160 C360 260, 520 260, 680 155"
+            />
+            <path
+              id="wire-s2b"
+              class="wire"
+              stroke="#059669"
+              d="M680 155 C520 260, 360 260, 195 160"
+              opacity="0"
+            />
+
+            <!-- Active wire overlays -->
+            <path
+              id="awire-b2d"
+              class="wire wire-active"
+              stroke="#7C3AED"
+              d="M195 140 C280 80, 340 60, 430 80"
+              opacity="0"
+            />
+            <path
+              id="awire-d2b"
+              class="wire wire-active"
+              stroke="#059669"
+              d="M430 80 C340 60, 280 80, 195 140"
+              opacity="0"
+            />
+            <path
+              id="awire-b2s"
+              class="wire wire-active"
+              stroke="#4F46E5"
+              d="M195 160 C360 260, 520 260, 680 155"
+              opacity="0"
+            />
+            <path
+              id="awire-s2b"
+              class="wire wire-active"
+              stroke="#D97706"
+              d="M680 155 C520 260, 360 260, 195 160"
+              opacity="0"
+            />
+
+            <!-- BROWSER DEVICE -->
+            <g id="dev-browser" style="cursor: default">
+              <!-- Laptop body -->
+              <rect
+                x="50"
+                y="95"
+                width="145"
+                height="100"
+                rx="10"
+                fill="white"
+                stroke="#CBD5E1"
+                stroke-width="1.5"
+              />
+              <!-- Screen bezel -->
+              <rect
+                x="58"
+                y="102"
+                width="129"
+                height="72"
+                rx="6"
+                fill="#EEF2FF"
+              />
+              <!-- Screen content lines -->
+              <rect
+                x="68"
+                y="114"
+                width="60"
+                height="5"
+                rx="2"
+                fill="#C7D2FE"
+              />
+              <rect
+                x="68"
+                y="124"
+                width="80"
+                height="4"
+                rx="2"
+                fill="#DDD6FE"
+                opacity="0.7"
+              />
+              <rect
+                x="68"
+                y="132"
+                width="45"
+                height="4"
+                rx="2"
+                fill="#DDD6FE"
+                opacity="0.5"
+              />
+              <rect
+                x="68"
+                y="140"
+                width="70"
+                height="4"
+                rx="2"
+                fill="#DDD6FE"
+                opacity="0.3"
+              />
+              <!-- URL bar -->
+              <rect
+                x="68"
+                y="104"
+                width="109"
+                height="8"
+                rx="4"
+                fill="white"
+                stroke="#E2E8F0"
+                stroke-width="0.5"
+              />
+              <circle cx="73" cy="108" r="2" fill="#F87171" />
+              <circle cx="79" cy="108" r="2" fill="#FBBF24" />
+              <circle cx="85" cy="108" r="2" fill="#34D399" />
+              <!-- Laptop base -->
+              <path
+                d="M40 195 L50 195 Q50 195 50 195 L195 195 Q205 195 205 195 L215 195 L210 205 Q208 208 205 208 L50 208 Q47 208 45 205 Z"
+                fill="#F1F5F9"
+                stroke="#CBD5E1"
+                stroke-width="1"
+              />
+              <!-- Highlight ring -->
+              <rect
+                id="hl-browser"
+                x="44"
+                y="90"
+                width="155"
+                height="110"
+                rx="14"
+                fill="none"
+                stroke="transparent"
+                stroke-width="2.5"
+                opacity="0"
+              />
+              <!-- Label -->
+              <text
+                x="127"
+                y="228"
+                text-anchor="middle"
+                class="device-label"
+                fill="#1E293B"
+              >
+                Your browser
+              </text>
+              <text
+                x="127"
+                y="242"
+                text-anchor="middle"
+                class="device-sublabel"
+                fill="#94A3B8"
+              >
+                Chrome / Firefox / Safari
+              </text>
+            </g>
+
+            <!-- DNS DEVICE -->
+            <g id="dev-dns" style="cursor: default">
+              <!-- Cloud shape using rects for simplicity -->
+              <rect
+                x="395"
+                y="42"
+                width="125"
+                height="75"
+                rx="14"
+                fill="white"
+                stroke="#CBD5E1"
+                stroke-width="1.5"
+              />
+              <!-- Magnifier icon -->
+              <circle
+                cx="432"
+                cy="68"
+                r="10"
+                fill="none"
+                stroke="#7C3AED"
+                stroke-width="2"
+                opacity="0.5"
+              />
+              <line
+                x1="440"
+                y1="76"
+                x2="446"
+                y2="82"
+                stroke="#7C3AED"
+                stroke-width="2"
+                stroke-linecap="round"
+                opacity="0.5"
+              />
+              <!-- DNS text -->
+              <text
+                x="480"
+                y="72"
+                font-size="14"
+                font-weight="700"
+                fill="#7C3AED"
+                font-family="Inter, sans-serif"
+              >
+                DNS
+              </text>
+              <text
+                x="480"
+                y="86"
+                font-size="9"
+                fill="#94A3B8"
+                font-family="JetBrains Mono, monospace"
+              >
+                resolver
+              </text>
+              <!-- Highlight ring -->
+              <rect
+                id="hl-dns"
+                x="389"
+                y="36"
+                width="137"
+                height="87"
+                rx="18"
+                fill="none"
+                stroke="transparent"
+                stroke-width="2.5"
+                opacity="0"
+              />
+              <text
+                x="458"
+                y="140"
+                text-anchor="middle"
+                class="device-label"
+                fill="#1E293B"
+              >
+                DNS server
+              </text>
+              <text
+                x="458"
+                y="154"
+                text-anchor="middle"
+                class="device-sublabel"
+                fill="#94A3B8"
+              >
+                name &#x2192; IP address
+              </text>
+            </g>
+
+            <!-- SERVER DEVICE -->
+            <g id="dev-server" style="cursor: default">
+              <!-- Server rack -->
+              <rect
+                x="645"
+                y="90"
+                width="130"
+                height="120"
+                rx="10"
+                fill="white"
+                stroke="#CBD5E1"
+                stroke-width="1.5"
+              />
+              <!-- Drive bays -->
+              <rect
+                x="658"
+                y="104"
+                width="104"
+                height="16"
+                rx="4"
+                fill="#F0FDFA"
+                stroke="#99F6E4"
+                stroke-width="0.5"
+              />
+              <circle cx="750" cy="112" r="3" fill="#2DD4BF" />
+              <rect
+                x="665"
+                y="109"
+                width="40"
+                height="6"
+                rx="2"
+                fill="#CCFBF1"
+              />
+              <rect
+                x="658"
+                y="126"
+                width="104"
+                height="16"
+                rx="4"
+                fill="#ECFEFF"
+                stroke="#A5F3FC"
+                stroke-width="0.5"
+              />
+              <circle cx="750" cy="134" r="3" fill="#22D3EE" />
+              <rect
+                x="665"
+                y="131"
+                width="55"
+                height="6"
+                rx="2"
+                fill="#CFFAFE"
+              />
+              <rect
+                x="658"
+                y="148"
+                width="104"
+                height="16"
+                rx="4"
+                fill="#F0F9FF"
+                stroke="#BAE6FD"
+                stroke-width="0.5"
+              />
+              <circle cx="750" cy="156" r="3" fill="#38BDF8" />
+              <rect
+                x="665"
+                y="153"
+                width="35"
+                height="6"
+                rx="2"
+                fill="#E0F2FE"
+              />
+              <!-- Status bar -->
+              <rect
+                x="658"
+                y="174"
+                width="104"
+                height="24"
+                rx="6"
+                fill="#F8FAFC"
+              />
+              <text
+                x="710"
+                y="190"
+                text-anchor="middle"
+                font-size="9"
+                font-weight="500"
+                fill="#94A3B8"
+                font-family="JetBrains Mono, monospace"
+              >
+                200 OK
+              </text>
+              <!-- Highlight ring -->
+              <rect
+                id="hl-server"
+                x="639"
+                y="84"
+                width="142"
+                height="132"
+                rx="14"
+                fill="none"
+                stroke="transparent"
+                stroke-width="2.5"
+                opacity="0"
+              />
+              <text
+                x="710"
+                y="232"
+                text-anchor="middle"
+                class="device-label"
+                fill="#1E293B"
+              >
+                Web server
+              </text>
+              <text
+                x="710"
+                y="246"
+                text-anchor="middle"
+                class="device-sublabel"
+                fill="#94A3B8"
+              >
+                93.184.216.34
+              </text>
+            </g>
+
+            <!-- Packet group -->
+            <g id="packets"></g>
+          </svg>
+
+          <div class="callout-bubble" id="callout"></div>
+        </div>
+
+        <div class="controls">
+          <button class="ctrl-btn" id="bp" onclick="prev()">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path
+                d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+              />
+            </svg>
+            Prev
+          </button>
+          <button class="ctrl-btn primary" id="bn" onclick="next()">
+            Next
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path
+                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+              />
+            </svg>
+          </button>
+          <button class="ctrl-btn" id="ba" onclick="toggleAuto()">
+            <svg viewBox="0 0 20 20" fill="currentColor" id="playIcon">
+              <path
+                d="M6.3 2.84A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.27l9.344-5.891a1.5 1.5 0 000-2.538L6.3 2.841z"
+              />
+            </svg>
+          </button>
+          <div class="progress-dots" id="dots"></div>
+          <span class="step-counter" id="counter"></span>
+        </div>
+      </div>
+
+      <div class="info-panel" id="info"></div>
+    </div>
+
+    <script>
+      const PHASES = [
+        "URL typed",
+        "DNS lookup",
+        "TCP handshake",
+        "HTTP exchange",
+        "Rendering",
+      ];
+      const PHASE_ICONS = [
+        "\u{1F310}",
+        "\u{1F50D}",
+        "\u{1F91D}",
+        "\u{2194}\uFE0F",
+        "\u{1F3A8}",
+      ];
+
+      const STEPS = [
+        {
+          p: 0,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h8M6 11h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+          title: "You type a URL and press Enter",
+          desc: "The browser parses https://example.com into protocol, hostname and path. Before making any network call, it checks the local DNS cache (browser, OS, router). If the IP is cached and fresh, DNS resolution is skipped entirely.",
+          tags: [
+            ["URL parsed", "indigo"],
+            ["Cache check", "amber"],
+          ],
+          anim: {
+            type: "glow",
+            target: "browser",
+            color: "#4F46E5",
+            wire: null,
+          },
+        },
+        {
+          p: 1,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+          title: 'Browser queries DNS: "What IP is example.com?"',
+          desc: "Cache miss. The query goes to a DNS resolver (usually your ISP). The resolver recursively walks through root servers, TLD nameservers and authoritative nameservers. Your browser simply waits for one answer.",
+          tags: [
+            ["UDP port 53", "violet"],
+            ["Recursive lookup", "amber"],
+          ],
+          anim: {
+            type: "packet",
+            path: "b2d",
+            color: "#7C3AED",
+            label: "example.com ?",
+            glow: "dns",
+          },
+        },
+        {
+          p: 1,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 10l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "DNS returns the IP address",
+          desc: "The resolver responds with 93.184.216.34. This result gets cached at multiple levels (resolver, OS, browser) with a TTL value. Until it expires, future lookups for this domain are instant.",
+          tags: [
+            ["93.184.216.34", "green"],
+            ["Cached with TTL", "amber"],
+          ],
+          anim: {
+            type: "packet",
+            path: "d2b",
+            color: "#059669",
+            label: "93.184.216.34",
+            glow: "browser",
+          },
+        },
+        {
+          p: 2,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "SYN: Browser starts the TCP handshake",
+          desc: "Now the browser knows where to connect. It sends a SYN (synchronise) packet to port 443 on the server. This carries a random initial sequence number that will track packet ordering for the rest of the session.",
+          tags: [
+            ["SYN", "indigo"],
+            ["Port 443", "amber"],
+            ["Seq = 1000", "indigo"],
+          ],
+          anim: {
+            type: "packet",
+            path: "b2s",
+            color: "#4F46E5",
+            label: "SYN",
+            glow: "server",
+          },
+        },
+        {
+          p: 2,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M16 10H4M8 14l-4-4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "SYN-ACK: Server acknowledges",
+          desc: 'Server replies: "Got your sequence 1000, here is mine: 2000." This is a combined SYN + ACK. Both sides now know each other\'s starting sequence number. One more step to go.',
+          tags: [
+            ["SYN-ACK", "green"],
+            ["Ack = 1001", "indigo"],
+          ],
+          anim: {
+            type: "packet",
+            path: "s2b",
+            color: "#059669",
+            label: "SYN-ACK",
+            glow: "browser",
+          },
+        },
+        {
+          p: 2,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 10l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "ACK + TLS: Secure channel established",
+          desc: "Browser sends the final ACK. TCP connection is open. Immediately, TLS begins: browser sends supported ciphers, server returns its SSL certificate, browser verifies it against trusted CAs, both derive an encryption key. All future traffic is encrypted.",
+          tags: [
+            ["ACK", "green"],
+            ["TLS 1.3", "indigo"],
+            ["Encrypted", "green"],
+          ],
+          anim: {
+            type: "packet",
+            path: "b2s",
+            color: "#059669",
+            label: "ACK + TLS",
+            glow: "server",
+          },
+        },
+        {
+          p: 3,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10h12M12 6l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "Browser sends HTTP GET request",
+          desc: "Over the encrypted channel, the browser sends GET /page HTTP/2 with headers: Host, Accept, cookies, and cache validators like If-None-Match. The server now knows exactly what to return.",
+          tags: [
+            ["GET /page", "amber"],
+            ["HTTP/2", "indigo"],
+            ["Encrypted", "green"],
+          ],
+          anim: {
+            type: "packet",
+            path: "b2s",
+            color: "#D97706",
+            label: "GET /page",
+            glow: "server",
+          },
+        },
+        {
+          p: 3,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M16 10H4M8 14l-4-4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "Server processes and responds with HTML",
+          desc: "Server runs application logic, queries its database, and returns a 200 OK response with the HTML document (gzip-compressed). Large responses are split across multiple TCP segments that get reassembled at the browser end.",
+          tags: [
+            ["200 OK", "green"],
+            ["gzip", "amber"],
+            ["text/html", "teal"],
+          ],
+          anim: {
+            type: "packet",
+            path: "s2b",
+            color: "#D97706",
+            label: "200 OK + HTML",
+            glow: "browser",
+          },
+        },
+        {
+          p: 4,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3 8h14" stroke="currentColor" stroke-width="1.2"/></svg>',
+          title: "Browser parses HTML and builds the DOM",
+          desc: "Bytes arrive, the browser builds a DOM tree. When it hits CSS or JS links it fetches them (sometimes in parallel). Scripts without defer or async block parsing until they download and execute, which is why script placement matters for performance.",
+          tags: [
+            ["DOM tree", "indigo"],
+            ["CSS/JS fetch", "amber"],
+            ["Parser blocking", "amber"],
+          ],
+          anim: {
+            type: "glow",
+            target: "browser",
+            color: "#D97706",
+            wire: null,
+          },
+        },
+        {
+          p: 4,
+          emoji:
+            '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 10l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+          title: "Render tree, layout, paint: page appears",
+          desc: "DOM + CSSOM merge into a render tree (only visible elements). Browser runs layout (computes positions and sizes), paint (draws pixels), and composite (layers). First Contentful Paint fires. JS executes, images load asynchronously, and window.onload marks the page as fully done.",
+          tags: [
+            ["Render tree", "indigo"],
+            ["Layout + paint", "green"],
+            ["onload", "green"],
+          ],
+          anim: {
+            type: "glow",
+            target: "browser",
+            color: "#059669",
+            wire: null,
+          },
+        },
+      ];
+
+      let cur = 0;
+      let autoTimer = null;
+      const svg = document.getElementById("net");
+      const pG = document.getElementById("packets");
+
+      const wirePaths = {
+        b2d: document.getElementById("wire-b2d"),
+        d2b: document.getElementById("wire-d2b"),
+        b2s: document.getElementById("wire-b2s"),
+        s2b: document.getElementById("wire-s2b"),
+      };
+      const aWires = {
+        b2d: document.getElementById("awire-b2d"),
+        d2b: document.getElementById("awire-d2b"),
+        b2s: document.getElementById("awire-b2s"),
+        s2b: document.getElementById("awire-s2b"),
+      };
+      const hlEls = {
+        browser: document.getElementById("hl-browser"),
+        dns: document.getElementById("hl-dns"),
+        server: document.getElementById("hl-server"),
+      };
+      const callout = document.getElementById("callout");
+
+      function buildPhases() {
+        const el = document.getElementById("phases");
+        el.innerHTML = "";
+        const cp = STEPS[cur].p;
+        PHASES.forEach((name, i) => {
+          const d = document.createElement("div");
+          d.className =
+            "phase" + (i === cp ? " active" : i < cp ? " done" : "");
+          d.setAttribute("data-p", i);
+          d.innerHTML = `<div class="phase-num">${PHASE_ICONS[i]} Phase ${i + 1}</div><div class="phase-name">${name}</div>`;
+          d.onclick = () => {
+            const fi = STEPS.findIndex((s) => s.p === i);
+            if (fi >= 0) {
+              cur = fi;
+              render();
+            }
+          };
+          el.appendChild(d);
+        });
+      }
+
+      function buildDots() {
+        const el = document.getElementById("dots");
+        el.innerHTML = "";
+        STEPS.forEach((_, i) => {
+          const d = document.createElement("div");
+          d.className =
+            "pdot" + (i === cur ? " active" : i < cur ? " done" : "");
+          d.onclick = () => {
+            cur = i;
+            render();
+          };
+          el.appendChild(d);
+        });
+      }
+
+      function clearFx() {
+        pG.innerHTML = "";
+        Object.values(aWires).forEach((w) => w.setAttribute("opacity", "0"));
+        Object.values(hlEls).forEach((h) => {
+          h.setAttribute("stroke", "transparent");
+          h.setAttribute("opacity", "0");
+          h.removeAttribute("filter");
+        });
+        callout.classList.remove("show");
+      }
+
+      function glowDevice(target, color) {
+        const el = hlEls[target];
+        if (!el) return;
+        const filterMap = {
+          "#4F46E5": "url(#glow-indigo)",
+          "#7C3AED": "url(#glow-violet)",
+          "#0891B2": "url(#glow-teal)",
+          "#059669": "url(#glow-green)",
+          "#D97706": "url(#glow-amber)",
+        };
+        el.setAttribute("stroke", color);
+        el.setAttribute("opacity", "0.8");
+        if (filterMap[color]) el.setAttribute("filter", filterMap[color]);
+      }
+
+      function animatePacket(pathId, color, label, glowTarget) {
+        const srcPath = wirePaths[pathId];
+        if (!srcPath) return;
+
+        const aw = aWires[pathId];
+        if (aw) {
+          aw.setAttribute("opacity", "0.35");
+          aw.setAttribute("stroke", color);
+        }
+
+        const len = srcPath.getTotalLength();
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+        const ring = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle",
+        );
+        ring.setAttribute("r", "12");
+        ring.setAttribute("fill", color);
+        ring.setAttribute("opacity", "0.1");
+
+        const dot = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle",
+        );
+        dot.setAttribute("r", "6");
+        dot.setAttribute("fill", color);
+        dot.classList.add("packet-ring");
+
+        const inner = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle",
+        );
+        inner.setAttribute("r", "2.5");
+        inner.setAttribute("fill", "white");
+
+        const txt = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text",
+        );
+        txt.setAttribute("text-anchor", "middle");
+        txt.setAttribute("y", "-18");
+        txt.setAttribute("font-size", "11");
+        txt.setAttribute("font-weight", "600");
+        txt.setAttribute("fill", color);
+        txt.setAttribute("font-family", "JetBrains Mono, monospace");
+        txt.textContent = label || "";
+
+        const bg = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "rect",
+        );
+        const tw = (label || "").length * 7 + 16;
+        bg.setAttribute("x", -tw / 2);
+        bg.setAttribute("y", "-30");
+        bg.setAttribute("width", tw);
+        bg.setAttribute("height", "16");
+        bg.setAttribute("rx", "8");
+        bg.setAttribute("fill", "white");
+        bg.setAttribute("stroke", color);
+        bg.setAttribute("stroke-width", "1");
+        bg.setAttribute("opacity", "0.9");
+
+        g.appendChild(ring);
+        g.appendChild(dot);
+        g.appendChild(inner);
+        g.appendChild(bg);
+        g.appendChild(txt);
+        pG.appendChild(g);
+
+        const dur = 1200;
+        const start = performance.now();
+
+        function frame(now) {
+          const pr = Math.min((now - start) / dur, 1);
+          const ease =
+            pr < 0.5 ? 4 * pr * pr * pr : 1 - Math.pow(-2 * pr + 2, 3) / 2;
+          const pt = srcPath.getPointAtLength(ease * len);
+          g.setAttribute("transform", `translate(${pt.x},${pt.y})`);
+          ring.setAttribute("r", 12 + 4 * Math.sin(pr * Math.PI * 3));
+          ring.setAttribute(
+            "opacity",
+            0.08 + 0.06 * Math.sin(pr * Math.PI * 2),
+          );
+          if (pr < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            if (glowTarget) glowDevice(glowTarget, color);
+            setTimeout(() => {
+              try {
+                pG.removeChild(g);
+              } catch (e) {}
+            }, 400);
+          }
+        }
+        requestAnimationFrame(frame);
+      }
+
+      function renderInfo() {
+        const s = STEPS[cur];
+        const phaseClass = "phase-" + s.p;
+        document.getElementById("info").innerHTML = `
+    <div class="info-badge ${phaseClass}">${s.emoji}</div>
+    <div class="info-body">
+      <div class="info-eyebrow">Step ${cur + 1} of ${STEPS.length}  &#183;  ${PHASES[s.p]}</div>
+      <div class="info-title">${s.title}</div>
+      <div class="info-desc">${s.desc}</div>
+      <div class="info-tags">
+        ${s.tags.map(([t, c]) => `<span class="tag tag-${c}">${t}</span>`).join("")}
+      </div>
+    </div>
+  `;
+      }
+
+      function render() {
+        const s = STEPS[cur];
+        clearFx();
+        buildPhases();
+        buildDots();
+        document.getElementById("counter").textContent =
+          `${cur + 1} / ${STEPS.length}`;
+        document.getElementById("bp").disabled = cur === 0;
+        document.getElementById("bn").innerHTML =
+          cur === STEPS.length - 1
+            ? 'Restart <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.379 2.341l1.06-1.06a4 4 0 006.79-1.71H12.5a.5.5 0 01-.354-.854l2.5-2.5a.5.5 0 01.708 0l2.5 2.5a.5.5 0 01-.354.854h-2.188z" clip-rule="evenodd"/><path fill-rule="evenodd" d="M4.688 8.576a5.5 5.5 0 019.379-2.341l-1.06 1.06a4 4 0 00-6.79 1.71H7.5a.5.5 0 01.354.854l-2.5 2.5a.5.5 0 01-.708 0l-2.5-2.5A.5.5 0 012.5 9h2.188z" clip-rule="evenodd"/></svg>'
+            : 'Next <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>';
+
+        renderInfo();
+
+        const a = s.anim;
+        if (a.type === "glow") {
+          glowDevice(a.target, a.color);
+        } else if (a.type === "packet") {
+          animatePacket(a.path, a.color, a.label, a.glow);
+        }
+      }
+
+      function next() {
+        if (cur < STEPS.length - 1) cur++;
+        else {
+          cur = 0;
+          stopAuto();
+        }
+        render();
+      }
+
+      function prev() {
+        if (cur > 0) {
+          cur--;
+          render();
+        }
+      }
+
+      function toggleAuto() {
+        if (autoTimer) {
+          stopAuto();
+        } else {
+          document.getElementById("playIcon").innerHTML =
+            '<rect x="5" y="4" width="4" height="12" rx="1" fill="currentColor"/><rect x="11" y="4" width="4" height="12" rx="1" fill="currentColor"/>';
+          autoTimer = setInterval(() => {
+            if (cur < STEPS.length - 1) {
+              cur++;
+              render();
+            } else stopAuto();
+          }, 3200);
+        }
+      }
+
+      function stopAuto() {
+        if (autoTimer) {
+          clearInterval(autoTimer);
+          autoTimer = null;
+        }
+        document.getElementById("playIcon").innerHTML =
+          '<path d="M6.3 2.84A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.27l9.344-5.891a1.5 1.5 0 000-2.538L6.3 2.841z" fill="currentColor"/>';
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight") next();
+        else if (e.key === "ArrowLeft") prev();
+        else if (e.key === " ") {
+          e.preventDefault();
+          toggleAuto();
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>
