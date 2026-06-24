@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOM Tree & Combinators</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #a78bfa;
+            font-size: 1.9rem;
+            text-shadow: 0 0 25px #a78bfa55;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.92rem;
+            margin-bottom: 26px;
+        }
+
+        /* ── BUTTONS ── */
+        .btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 12px 22px;
+            border-radius: 50px;
+            border: 2px solid;
+            background: transparent;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn .sym {
+            font-size: 1.1rem;
+            font-weight: 900;
+        }
+
+        .btn.active {
+            color: #0f172a !important;
+        }
+
+        .b-desc {
+            border-color: #93c5fd;
+            color: #93c5fd;
+        }
+
+        .b-desc.active {
+            background: #93c5fd;
+        }
+
+        .b-child {
+            border-color: #4ade80;
+            color: #4ade80;
+        }
+
+        .b-child.active {
+            background: #4ade80;
+        }
+
+        .b-adj {
+            border-color: #fb923c;
+            color: #fb923c;
+        }
+
+        .b-adj.active {
+            background: #fb923c;
+        }
+
+        .b-gen {
+            border-color: #f472b6;
+            color: #f472b6;
+        }
+
+        .b-gen.active {
+            background: #f472b6;
+        }
+
+        .b-reset {
+            border-color: #475569;
+            color: #94a3b8;
+        }
+
+        .b-reset:hover {
+            border-color: #94a3b8;
+            color: #e2e8f0;
+        }
+
+        /* ── CURRENT SELECTOR DISPLAY ── */
+        .selector-display {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 1.1rem;
+            min-height: 30px;
+        }
+
+        .selector-display code {
+            background: #1e293b;
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            border: 1px solid #334155;
+            color: #facc15;
+        }
+
+        .selector-display .hint {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* ── TREE ── */
+        .tree-wrap {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 34px 20px;
+            border: 1px solid #2d3748;
+            overflow-x: auto;
+        }
+
+        .svg-wrap {
+            position: relative;
+            display: inline-block;
+            min-width: 100%;
+        }
+
+        #lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: visible;
+        }
+
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .row+.row {
+            margin-top: 50px;
+        }
+
+        .node-box {
+            padding: 11px 18px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            text-align: center;
+            min-width: 78px;
+            font-family: 'Courier New', monospace;
+            background: #0f172a;
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        /* hero highlighted as reference (the .hero / h2) */
+        .node-box.reference {
+            background: #3b1f5e;
+            border-color: #a855f7;
+            color: #d8b4fe;
+            box-shadow: 0 0 18px #a855f766;
+        }
+
+        /* matched by current combinator */
+        .node-box.match {
+            background: #14532d;
+            border-color: #4ade80;
+            color: #bbf7d0;
+            box-shadow: 0 0 20px #4ade8066;
+            transform: scale(1.08);
+        }
+
+        .node-box.dim {
+            opacity: 0.22;
+        }
+
+        /* ── COMBINATOR TABLE ── */
+        .table-card {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #2d3748;
+            margin-top: 30px;
+        }
+
+        .table-card h2 {
+            color: #a78bfa;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px 14px;
+            text-align: left;
+            border-bottom: 1px solid #2d3748;
+            font-size: 0.88rem;
+        }
+
+        th {
+            color: #64748b;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            letter-spacing: 1px;
+        }
+
+        td .sym {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #facc15;
+        }
+
+        td code {
+            font-family: 'Courier New', monospace;
+            background: #0f172a;
+            padding: 3px 9px;
+            border-radius: 6px;
+            color: #93c5fd;
+            border: 1px solid #2d3748;
+        }
+
+        tr.r-desc td:first-child {
+            color: #93c5fd;
+            font-weight: 700;
+        }
+
+        tr.r-child td:first-child {
+            color: #4ade80;
+            font-weight: 700;
+        }
+
+        tr.r-adj td:first-child {
+            color: #fb923c;
+            font-weight: 700;
+        }
+
+        tr.r-gen td:first-child {
+            color: #f472b6;
+            font-weight: 700;
+        }
+
+        /* ── MISTAKES ── */
+        .mistakes {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #2d3748;
+            margin-top: 24px;
+        }
+
+        .mistakes h2 {
+            color: #f87171;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .mistakes ul {
+            list-style: none;
+        }
+
+        .mistakes li {
+            padding: 12px 16px;
+            background: #0f172a;
+            border-radius: 10px;
+            border-left: 4px solid #f87171;
+            margin-bottom: 12px;
+            font-size: 0.86rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+
+        .mistakes li code {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            padding: 2px 8px;
+            border-radius: 5px;
+            color: #fca5a5;
+        }
+
+        .mistakes li strong {
+            color: #fcd34d;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🌳 DOM Tree & CSS Combinators</h1>
+    <p class="subtitle">The <span style="color:#a855f7">purple</span> node is the reference. Click a combinator to see
+        what gets <span style="color:#4ade80">selected</span>.</p>
+
+    <!-- BUTTONS -->
+    <div class="btns">
+        <button class="btn b-desc" onclick="show('desc')"><span class="sym">␣</span> Descendant</button>
+        <button class="btn b-child" onclick="show('child')"><span class="sym">&gt;</span> Child</button>
+        <button class="btn b-adj" onclick="show('adj')"><span class="sym">+</span> Adjacent Sibling</button>
+        <button class="btn b-gen" onclick="show('gen')"><span class="sym">~</span> General Sibling</button>
+        <button class="btn b-reset" onclick="reset()">↺ Reset</button>
+    </div>
+
+    <!-- SELECTOR DISPLAY -->
+    <div class="selector-display" id="selDisplay">
+        <span class="hint">Click a button above to highlight matching nodes…</span>
+    </div>
+
+    <!-- TREE -->
+    <div class="tree-wrap">
+        <div class="svg-wrap" id="svgWrap">
+            <svg id="lines"></svg>
+            <div id="tree"></div>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-card">
+        <h2>📋 Combinator Reference</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Combinator</th>
+                    <th>Symbol</th>
+                    <th>Meaning</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="r-desc">
+                    <td>Descendant</td>
+                    <td><span class="sym">␣</span> (space)</td>
+                    <td>Any level inside</td>
+                    <td><code>.hero p</code></td>
+                </tr>
+                <tr class="r-child">
+                    <td>Child</td>
+                    <td><span class="sym">&gt;</span></td>
+                    <td>Direct children only</td>
+                    <td><code>.hero &gt; p</code></td>
+                </tr>
+                <tr class="r-adj">
+                    <td>Adjacent Sibling</td>
+                    <td><span class="sym">+</span></td>
+                    <td>Immediately next sibling</td>
+                    <td><code>h2 + p</code></td>
+                </tr>
+                <tr class="r-gen">
+                    <td>General Sibling</td>
+                    <td><span class="sym">~</span></td>
+                    <td>All following siblings</td>
+                    <td><code>h2 ~ p</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- MISTAKES -->
+    <div class="mistakes">
+        <h2>⚠️ Common Mistakes: Combinators</h2>
+        <ul>
+            <li>Confusing <strong>descendant (space)</strong> with <strong>child (&gt;)</strong>. The space reaches all
+                the way down. The <code>&gt;</code> stops at one level.</li>
+            <li>Forgetting that sibling selectors (<code>+</code> and <code>~</code>) only target elements that come
+                <strong>after</strong> the first element in the HTML source order — not before.</li>
+            <li>Using overly long combinator chains like <code>.page .main .content .card .title</code>. This creates
+                fragile selectors that break when the HTML structure changes. <strong>Keep combinator chains short and
+                    intentional.</strong></li>
+        </ul>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════
+        //  TREE STRUCTURE  (4 levels, 3-4 children each)
+        //  We mark one node as the "reference" for each demo.
+        // ═══════════════════════════════════════════
+        const TREE = {
+            id: 'body', label: 'body',
+            children: [
+                {
+                    id: 'hero', label: '.hero', children: [
+                        {
+                            id: 'h2', label: 'h2', children: [
+                                { id: 'span1', label: 'span', children: [] }
+                            ]
+                        },
+                        {
+                            id: 'p1', label: 'p', children: [
+                                { id: 'a1', label: 'a', children: [] }
+                            ]
+                        },
+                        { id: 'p2', label: 'p', children: [] },
+                        {
+                            id: 'div1', label: 'div', children: [
+                                { id: 'p3', label: 'p', children: [] },
+                                { id: 'p4', label: 'p', children: [] }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: 'footer', label: 'footer', children: [
+                        { id: 'p5', label: 'p', children: [] },
+                        { id: 'span2', label: 'span', children: [] }
+                    ]
+                }
+            ]
+        };
+
+        // flat maps
+        const nMap = {}, pMap = {};
+        (function build(n, pid) { nMap[n.id] = n; pMap[n.id] = pid; n.children.forEach(c => build(c, n.id)); })(TREE, null);
+
+        // ── render tree level by level ──
+        function render() {
+            const container = document.getElementById('tree');
+            container.innerHTML = '';
+            const levels = []; let q = [TREE];
+            while (q.length) { levels.push([...q]); q = q.flatMap(n => n.children); }
+            levels.forEach(level => {
+                const row = document.createElement('div');
+                row.className = 'row';
+                level.forEach(node => {
+                    const box = document.createElement('div');
+                    box.className = 'node-box';
+                    box.id = 'box-' + node.id;
+                    box.textContent = node.label;
+                    row.appendChild(box);
+                });
+                container.appendChild(row);
+            });
+            requestAnimationFrame(() => requestAnimationFrame(drawLines));
+        }
+
+        function drawLines() {
+            const wrap = document.getElementById('svgWrap');
+            const wRect = wrap.getBoundingClientRect();
+            const svg = document.getElementById('lines');
+            svg.innerHTML = '';
+            Object.keys(nMap).forEach(id => {
+                const node = nMap[id];
+                const pBox = document.getElementById('box-' + id);
+                if (!node.children.length || !pBox) return;
+                const pr = pBox.getBoundingClientRect();
+                const px = pr.left + pr.width / 2 - wRect.left, py = pr.bottom - wRect.top;
+                node.children.forEach(c => {
+                    const cb = document.getElementById('box-' + c.id);
+                    if (!cb) return;
+                    const cr = cb.getBoundingClientRect();
+                    const cx = cr.left + cr.width / 2 - wRect.left, cy = cr.top - wRect.top;
+                    const my = (py + cy) / 2;
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', `M${px},${py} C${px},${my} ${cx},${my} ${cx},${cy}`);
+                    path.setAttribute('stroke', '#334155');
+                    path.setAttribute('stroke-width', '2');
+                    path.setAttribute('fill', 'none');
+                    path.dataset.parent = id; path.dataset.child = c.id;
+                    svg.appendChild(path);
+                });
+            });
+            svg.style.width = wrap.scrollWidth + 'px';
+            svg.style.height = wrap.scrollHeight + 'px';
+        }
+
+        // ═══════════════════════════════════════════
+        //  COMBINATOR LOGIC
+        // ═══════════════════════════════════════════
+        function descendants(id) { const r = []; (function w(n) { n.children.forEach(c => { r.push(c.id); w(c); }); })(nMap[id]); return r; }
+        function children(id) { return nMap[id].children.map(c => c.id); }
+        function nextSiblings(id) {
+            const pid = pMap[id]; if (!pid) return [];
+            const sibs = nMap[pid].children; const i = sibs.findIndex(c => c.id === id);
+            return sibs.slice(i + 1).map(c => c.id);
+        }
+
+        const DEMOS = {
+            desc: {
+                ref: 'hero', sel: '.hero p', color: '#93c5fd', cls: 'b-desc',
+                targets: () => descendants('hero').filter(id => nMap[id].label === 'p')
+            },
+            child: {
+                ref: 'hero', sel: '.hero > p', color: '#4ade80', cls: 'b-child',
+                targets: () => children('hero').filter(id => nMap[id].label === 'p')
+            },
+            adj: {
+                ref: 'h2', sel: 'h2 + p', color: '#fb923c', cls: 'b-adj',
+                targets: () => { const ns = nextSiblings('h2'); return ns.length && nMap[ns[0]].label === 'p' ? [ns[0]] : []; }
+            },
+            gen: {
+                ref: 'h2', sel: 'h2 ~ p', color: '#f472b6', cls: 'b-gen',
+                targets: () => nextSiblings('h2').filter(id => nMap[id].label === 'p')
+            },
+        };
+
+        function show(type) {
+            reset(true);
+            const demo = DEMOS[type];
+            document.querySelector('.' + demo.cls).classList.add('active');
+
+            // reference node
+            document.getElementById('box-' + demo.ref).classList.add('reference');
+
+            const matched = demo.targets();
+            // dim everything not reference/match
+            Object.keys(nMap).forEach(id => {
+                if (id !== demo.ref && !matched.includes(id))
+                    document.getElementById('box-' + id).classList.add('dim');
+            });
+            matched.forEach(id => document.getElementById('box-' + id).classList.add('match'));
+
+            // selector display
+            document.getElementById('selDisplay').innerHTML =
+                `<code>${demo.sel}</code> &nbsp; <span class="hint">→ ${matched.length} match${matched.length !== 1 ? 'es' : ''}</span>`;
+
+            // highlight connecting lines
+            highlightLines(demo.ref, matched);
+        }
+
+        function highlightLines(ref, matched) {
+            const relevant = new Set([ref, ...matched]);
+            document.querySelectorAll('#lines path').forEach(l => {
+                const p = l.dataset.parent, c = l.dataset.child;
+                if (relevant.has(p) && relevant.has(c)) {
+                    l.setAttribute('stroke', '#a78bfa');
+                    l.setAttribute('stroke-width', '2.5');
+                    l.setAttribute('opacity', '1');
+                } else {
+                    l.setAttribute('stroke', '#1e293b');
+                    l.setAttribute('opacity', '0.35');
+                }
+            });
+        }
+
+        function reset(keepDisplay) {
+            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            Object.keys(nMap).forEach(id => {
+                const b = document.getElementById('box-' + id);
+                b.classList.remove('reference', 'match', 'dim');
+            });
+            document.querySelectorAll('#lines path').forEach(l => {
+                l.setAttribute('stroke', '#334155');
+                l.setAttribute('stroke-width', '2');
+                l.setAttribute('opacity', '1');
+            });
+            if (!keepDisplay)
+                document.getElementById('selDisplay').innerHTML = '<span class="hint">Click a button above to highlight matching nodes…</span>';
+        }
+
+        // init
+        render();
+        window.addEventListener('resize', drawLines);
+    </script>
+</body>
+
+</html>
