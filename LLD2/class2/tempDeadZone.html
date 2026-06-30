@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Temporal Dead Zone (TDZ) — Interactive Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f8f9fa;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #canvas-container {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+            transform-origin: top center;
+        }
+
+        canvas {
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        #panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid #e5e7eb;
+            padding: 14px 20px 18px;
+            z-index: 200;
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        #panel-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .panel-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .panel-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        .state-btn {
+            padding: 7px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #fff;
+            color: #374151;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .state-btn:hover {
+            border-color: #9ca3af;
+            background: #f9fafb;
+            transform: translateY(-1px);
+        }
+
+        .state-btn.active {
+            border-color: #2563EB;
+            background: #EFF6FF;
+            color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .state-btn.cat-setup {
+            border-left: 4px solid #6366F1;
+        }
+
+        .state-btn.cat-setup.active {
+            border-color: #6366F1;
+            background: #EEF2FF;
+            color: #4338CA;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+
+        .state-btn.cat-tdz {
+            border-left: 4px solid #EF4444;
+        }
+
+        .state-btn.cat-tdz.active {
+            border-color: #EF4444;
+            background: #FEF2F2;
+            color: #B91C1C;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+        }
+
+        .state-btn.cat-resolve {
+            border-left: 4px solid #10B981;
+        }
+
+        .state-btn.cat-resolve.active {
+            border-color: #10B981;
+            background: #F0FDF4;
+            color: #065F46;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+        }
+
+        .state-btn.cat-summary {
+            border-left: 4px solid #F59E0B;
+        }
+
+        .state-btn.cat-summary.active {
+            border-color: #F59E0B;
+            background: #FFFBEB;
+            color: #92400E;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+        }
+
+        .state-btn .step-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            font-size: 11px;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+
+        .state-btn.active .step-num {
+            background: currentColor;
+            color: #fff;
+        }
+
+        #playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ctrl-btn {
+            padding: 8px 22px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        #playBtn {
+            background: #2563EB;
+            color: white;
+        }
+
+        #playBtn:hover {
+            background: #1d4ed8;
+        }
+
+        #prevBtn,
+        #nextBtn {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        #prevBtn:hover,
+        #nextBtn:hover {
+            background: #e5e7eb;
+        }
+
+        #resetBtn {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        #resetBtn:hover {
+            background: #fee2e2;
+        }
+
+        #timeSlider {
+            flex: 1;
+            min-width: 200px;
+            max-width: 500px;
+            height: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e5e7eb;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #timeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #2563EB;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+        }
+
+        #timeLabel {
+            font-size: 13px;
+            color: #6b7280;
+            font-weight: 600;
+            min-width: 70px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #stateIndicator {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 6px;
+            background: #f3f4f6;
+            color: #374151;
+            min-width: 180px;
+            text-align: center;
+        }
+
+        .sep {
+            width: 1px;
+            height: 28px;
+            background: #e5e7eb;
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container">
+        <canvas id="c" width="1920" height="1080"></canvas>
+    </div>
+
+    <div id="panel">
+        <div id="panel-inner">
+            <div class="panel-row">
+                <span class="panel-label">Playback</span>
+                <div id="playback-controls">
+                    <button class="ctrl-btn" id="prevBtn">◀ Prev</button>
+                    <button class="ctrl-btn" id="playBtn">▶ Play</button>
+                    <button class="ctrl-btn" id="nextBtn">Next ▶</button>
+                    <button class="ctrl-btn" id="resetBtn">↻ Reset</button>
+                    <div class="sep"></div>
+                    <input type="range" id="timeSlider" min="0" max="28000" value="0" step="50">
+                    <span id="timeLabel">0.0s</span>
+                    <div class="sep"></div>
+                    <span id="stateIndicator">Ready</span>
+                </div>
+            </div>
+
+            <div class="panel-row">
+                <span class="panel-label">Setup</span>
+                <button class="state-btn cat-setup" data-state="0"><span class="step-num">1</span>Title & Code</button>
+                <button class="state-btn cat-setup" data-state="1"><span class="step-num">2</span>Timeline
+                    Appears</button>
+                <button class="state-btn cat-setup" data-state="2"><span class="step-num">3</span>Variable
+                    Registered</button>
+                <button class="state-btn cat-setup" data-state="3"><span class="step-num">4</span>Markers
+                    Placed</button>
+            </div>
+
+            <div class="panel-row">
+                <span class="panel-label">TDZ</span>
+                <button class="state-btn cat-tdz" data-state="4"><span class="step-num">5</span>TDZ Zone
+                    Appears</button>
+                <button class="state-btn cat-tdz" data-state="5"><span class="step-num">6</span>Cursor Moves</button>
+                <button class="state-btn cat-tdz" data-state="6"><span class="step-num">7</span>Access Attempt</button>
+                <button class="state-btn cat-tdz" data-state="7"><span class="step-num">8</span>ReferenceError</button>
+                <button class="state-btn cat-tdz" data-state="8"><span class="step-num">9</span>Error Details</button>
+            </div>
+
+            <div class="panel-row">
+                <span class="panel-label">Resolve</span>
+                <button class="state-btn cat-resolve" data-state="9"><span class="step-num">10</span>Cursor
+                    Resumes</button>
+                <button class="state-btn cat-resolve" data-state="10"><span class="step-num">11</span>Reaches
+                    Declaration</button>
+                <button class="state-btn cat-resolve" data-state="11"><span class="step-num">12</span>TDZ
+                    Dissolves</button>
+                <button class="state-btn cat-resolve" data-state="12"><span class="step-num">13</span>score →
+                    95</button>
+            </div>
+
+            <div class="panel-row">
+                <span class="panel-label">Summary</span>
+                <button class="state-btn cat-summary" data-state="13"><span class="step-num">14</span>Key
+                    Concepts</button>
+                <button class="state-btn cat-summary" data-state="14"><span class="step-num">15</span>var vs let
+                    Table</button>
+                <button class="state-btn cat-summary" data-state="15"><span class="step-num">16</span>Complete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const W = 1920, H = 1080;
+
+        function fitCanvas() {
+            const panelH = document.getElementById('panel').offsetHeight || 220;
+            const sx = window.innerWidth / W;
+            const sy = (window.innerHeight - panelH - 20) / H;
+            const s = Math.min(sx, sy, 1);
+            document.getElementById('canvas-container').style.transform = `scale(${s})`;
+            document.getElementById('canvas-container').style.marginTop = '10px';
+        }
+        fitCanvas();
+        window.addEventListener('resize', fitCanvas);
+        setTimeout(fitCanvas, 100);
+
+        const COL = {
+            bg: '#ffffff', text: '#1f2937', textMed: '#4b5563', textLight: '#9ca3af',
+            blue: '#2563EB', blueDark: '#1e40af', blueLight: '#dbeafe',
+            red: '#EF4444', redDark: '#b91c1c', redLight: '#FEE2E2',
+            orange: '#F97316', green: '#10B981', greenDark: '#065f46', greenLight: '#D1FAE5',
+            gray: '#6B7280', grayLight: '#F3F4F6', grayBorder: '#E5E7EB',
+            purple: '#7C3AED', purpleLight: '#EDE9FE',
+        };
+
+        // ── State definitions ──
+        const STATES = [
+            { id: 0, name: 'Title & Code', time: 0, desc: 'Title and code panel appear' },
+            { id: 1, name: 'Timeline Appears', time: 2000, desc: 'Horizontal timeline with Program Starts' },
+            { id: 2, name: 'Variable Registered', time: 3200, desc: 'let score registered but unavailable' },
+            { id: 3, name: 'Markers Placed', time: 4500, desc: 'Access and declaration markers on timeline' },
+            { id: 4, name: 'TDZ Zone Appears', time: 6000, desc: 'Red TDZ rectangle highlights danger zone' },
+            { id: 5, name: 'Cursor Moves', time: 7800, desc: 'Execution cursor travels along timeline' },
+            { id: 6, name: 'Access Attempt', time: 9200, desc: 'Cursor hits console.log(score) in TDZ' },
+            { id: 7, name: 'ReferenceError', time: 10200, desc: 'Error thrown — cannot access before init' },
+            { id: 8, name: 'Error Details', time: 12000, desc: 'Full error message displayed' },
+            { id: 9, name: 'Cursor Resumes', time: 16000, desc: 'Execution resumes toward declaration' },
+            { id: 10, name: 'Reaches Declaration', time: 19000, desc: 'Cursor arrives at let score = 95' },
+            { id: 11, name: 'TDZ Dissolves', time: 20500, desc: 'TDZ zone fades and dissolves with particles' },
+            { id: 12, name: 'score → 95', time: 21500, desc: 'Variable initialized successfully' },
+            { id: 13, name: 'Key Concepts', time: 24000, desc: 'Key takeaway bullets appear' },
+            { id: 14, name: 'var vs let Table', time: 25000, desc: 'Comparison table animates in' },
+            { id: 15, name: 'Complete', time: 27000, desc: 'Animation complete' },
+        ];
+
+        let t = 0, playing = false, lastTS = 0, currentStateIdx = 0;
+        const DUR = 28000;
+
+        // ── Easing ──
+        function easeOut(x) { return 1 - Math.pow(1 - x, 3) }
+        function easeInOut(x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2 }
+        function easeOutBack(x) { const c = 1.70158; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2) }
+        function easeOutElastic(x) { if (x === 0 || x === 1) return x; return Math.pow(2, -10 * x) * Math.sin((x * 10 - .75) * (2 * Math.PI) / 3) + 1 }
+        function clamp(v, a = 0, b = 1) { return Math.max(a, Math.min(b, v)) }
+        function prog(s, e) { return clamp((t - s) / (e - s)) }
+        function lerp(a, b, p) { return a + (b - a) * clamp(p) }
+        function pulse01(spd = 1) { return 0.5 + 0.5 * Math.sin(t * spd * 0.006) }
+
+        // ── Draw helpers ──
+        function rr(x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+        }
+
+        function drawArrow(fx, fy, tx, ty, col, alpha, lw = 2) {
+            ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = lw;
+            const a = Math.atan2(ty - fy, tx - fx), hl = 14;
+            ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(tx, ty);
+            ctx.lineTo(tx - hl * Math.cos(a - Math.PI / 6), ty - hl * Math.sin(a - Math.PI / 6));
+            ctx.lineTo(tx - hl * Math.cos(a + Math.PI / 6), ty - hl * Math.sin(a + Math.PI / 6));
+            ctx.closePath(); ctx.fill(); ctx.restore();
+        }
+
+        // ── CODE PANEL ──
+        const cpX = 80, cpY = 140, cpW = 520, cpH = 340;
+        const lines = [
+            { num: '1', tokens: [{ t: '// Scope begins here', c: '#9CA3AF' }] },
+            { num: '2', tokens: [] },
+            { num: '3', tokens: [{ t: 'console', c: COL.purple }, { t: '.', c: COL.text }, { t: 'log', c: COL.blue }, { t: '(score);', c: COL.text }] },
+            { num: '4', tokens: [] },
+            { num: '5', tokens: [{ t: 'let', c: COL.blue }, { t: ' score = ', c: COL.text }, { t: '95', c: '#059669' }, { t: ';', c: COL.text }] },
+        ];
+        const lineH = 48, lineStartY = cpY + 68;
+
+        // ── TIMELINE positions ──
+        const tlX = 700, tlY = 280, tlW = 1100;
+        const posAccess = 0.35, posDecl = 0.75;
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, W, H);
+
+            // ══════════ TITLE ══════════
+            const titleA = easeOut(prog(0, 900));
+            ctx.save(); ctx.globalAlpha = titleA;
+            ctx.font = '700 38px "Segoe UI",system-ui,sans-serif';
+            ctx.fillStyle = COL.text; ctx.textAlign = 'center';
+            ctx.fillText('JavaScript Temporal Dead Zone (TDZ)', W / 2, 60);
+            ctx.font = '400 18px "Segoe UI",system-ui,sans-serif';
+            ctx.fillStyle = COL.textMed;
+            ctx.fillText('Understanding why let and const behave differently from var', W / 2, 92);
+            ctx.strokeStyle = COL.grayBorder; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(560, 108); ctx.lineTo(1360, 108); ctx.stroke();
+            ctx.restore();
+
+            // ══════════ CODE PANEL ══════════
+            const codeA = easeOut(prog(300, 1100));
+            ctx.save(); ctx.globalAlpha = codeA;
+            ctx.fillStyle = '#F8FAFC'; ctx.strokeStyle = COL.grayBorder; ctx.lineWidth = 1;
+            rr(cpX, cpY, cpW, cpH, 14); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = COL.grayLight; rr(cpX, cpY, cpW, 42, 14); ctx.fill();
+            ctx.fillRect(cpX, cpY + 30, cpW, 12);
+            ctx.strokeStyle = COL.grayBorder; ctx.beginPath(); ctx.moveTo(cpX, cpY + 42); ctx.lineTo(cpX + cpW, cpY + 42); ctx.stroke();
+            ['#EF4444', '#F59E0B', '#22C55E'].forEach((c, i) => {
+                ctx.fillStyle = c; ctx.beginPath(); ctx.arc(cpX + 22 + i * 22, cpY + 21, 6, 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.font = '500 13px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.gray; ctx.textAlign = 'center';
+            ctx.fillText('example.js', cpX + cpW / 2, cpY + 26);
+            ctx.restore();
+
+            // Code lines with highlights
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i], ly = lineStartY + i * lineH;
+                ctx.save(); ctx.globalAlpha = codeA;
+
+                let hlCol = null, hlInt = 0;
+                if (i === 2 && t >= 8500 && t <= 14500) {
+                    hlInt = Math.min(easeOut(prog(8500, 9200)), 1 - prog(14000, 14500));
+                    hlCol = COL.red;
+                }
+                if (i === 4 && t >= 18000 && t <= 23000) {
+                    hlInt = Math.min(easeOut(prog(18000, 18800)), 1 - prog(22500, 23000));
+                    hlCol = COL.green;
+                }
+                if (hlCol && hlInt > 0) {
+                    ctx.globalAlpha = codeA * hlInt * 0.3;
+                    ctx.fillStyle = hlCol === COL.red ? COL.redLight : COL.greenLight;
+                    rr(cpX + 10, ly - 16, cpW - 20, 40, 6); ctx.fill();
+                    ctx.globalAlpha = codeA * hlInt * 0.7;
+                    ctx.strokeStyle = hlCol; ctx.lineWidth = 1.5;
+                    rr(cpX + 10, ly - 16, cpW - 20, 40, 6); ctx.stroke();
+                    ctx.globalAlpha = codeA;
+                }
+                ctx.font = '400 14px "SF Mono","Fira Code",Consolas,monospace';
+                ctx.fillStyle = '#9CA3AF'; ctx.textAlign = 'right';
+                ctx.fillText(line.num, cpX + 42, ly + 5);
+                ctx.textAlign = 'left';
+                ctx.font = '500 16px "SF Mono","Fira Code",Consolas,monospace';
+                let tx = cpX + 60;
+                for (const tok of line.tokens) {
+                    ctx.fillStyle = tok.c; ctx.fillText(tok.t, tx, ly + 5);
+                    tx += ctx.measureText(tok.t).width;
+                }
+                ctx.restore();
+            }
+
+            // ══════════ TIMELINE ══════════
+            const tlA = easeOut(prog(1500, 2500));
+            const accX = tlX + tlW * posAccess, declX = tlX + tlW * posDecl;
+
+            ctx.save(); ctx.globalAlpha = tlA;
+            // track
+            ctx.fillStyle = COL.grayBorder;
+            rr(tlX, tlY - 2, tlW, 4, 2); ctx.fill();
+
+            // "Program Starts"
+            const startA = easeOut(prog(2000, 2800));
+            ctx.save(); ctx.globalAlpha = tlA * startA;
+            ctx.fillStyle = COL.blue;
+            ctx.beginPath(); ctx.arc(tlX, tlY, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = COL.text; ctx.font = '600 15px "Segoe UI",system-ui,sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('Program Starts', tlX, tlY - 22);
+            ctx.fillStyle = COL.blueLight; rr(tlX - 48, tlY + 14, 96, 24, 6); ctx.fill();
+            ctx.fillStyle = COL.blue; ctx.font = '600 12px "Segoe UI",system-ui,sans-serif';
+            ctx.fillText('Scope begins', tlX, tlY + 30);
+            ctx.restore();
+
+            // Access marker
+            if (t >= 4000) {
+                const aA = easeOut(prog(4000, 4800));
+                ctx.save(); ctx.globalAlpha = tlA * aA;
+                ctx.fillStyle = COL.red; ctx.beginPath(); ctx.arc(accX, tlY, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.font = '500 14px "SF Mono","Fira Code",Consolas,monospace'; ctx.textAlign = 'center';
+                ctx.fillStyle = COL.redDark; ctx.fillText('console.log(score)', accX, tlY - 22);
+                ctx.restore();
+            }
+
+            // Declaration marker
+            if (t >= 5000) {
+                const dA = easeOut(prog(5000, 5800));
+                ctx.save(); ctx.globalAlpha = tlA * dA;
+                ctx.fillStyle = COL.green; ctx.beginPath(); ctx.arc(declX, tlY, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.font = '500 14px "SF Mono","Fira Code",Consolas,monospace'; ctx.textAlign = 'center';
+                ctx.fillStyle = COL.greenDark; ctx.fillText('let score = 95;', declX, tlY - 22);
+                ctx.restore();
+            }
+
+            // ══════════ TDZ RED ZONE ══════════
+            const tdzIn = easeOut(prog(5800, 7200));
+            const tdzOut = easeOut(prog(20000, 21500));
+            const tdzAlpha = tdzIn * (1 - tdzOut);
+
+            if (tdzAlpha > 0) {
+                const tdzTop = tlY - 65, tdzBot = tlY + 55, tdzH = tdzBot - tdzTop;
+                ctx.save(); ctx.globalAlpha = tlA * tdzAlpha;
+
+                const ra = 0.08 + 0.04 * pulse01(0.8);
+                ctx.fillStyle = `rgba(239,68,68,${ra})`;
+                rr(tlX, tdzTop, declX - tlX, tdzH, 10); ctx.fill();
+
+                ctx.strokeStyle = COL.red + '50'; ctx.lineWidth = 2;
+                ctx.setLineDash([10, 6]); ctx.lineDashOffset = -t * 0.02;
+                rr(tlX, tdzTop, declX - tlX, tdzH, 10); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // hazard stripes
+                ctx.save(); ctx.globalAlpha *= 0.06; ctx.strokeStyle = COL.red; ctx.lineWidth = 1;
+                ctx.beginPath(); rr(tlX, tdzTop, declX - tlX, tdzH, 10); ctx.clip();
+                for (let sx = tlX - tdzH; sx < declX + tdzH; sx += 30) {
+                    ctx.moveTo(sx, tdzBot); ctx.lineTo(sx + tdzH, tdzTop);
+                }
+                ctx.stroke(); ctx.restore();
+
+                // TDZ label
+                const lx = (tlX + declX) / 2, ly2 = tlY + 48;
+                ctx.fillStyle = COL.redLight;
+                rr(lx - 140, ly2 - 18, 280, 32, 8); ctx.fill();
+                ctx.strokeStyle = COL.red + '60'; ctx.lineWidth = 1;
+                rr(lx - 140, ly2 - 18, 280, 32, 8); ctx.stroke();
+                ctx.font = '16px "Segoe UI"'; ctx.textAlign = 'center'; ctx.fillText('⚠️', lx - 120, ly2 + 4);
+                ctx.font = '700 15px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.redDark;
+                ctx.fillText('Temporal Dead Zone', lx, ly2 + 4);
+
+                ctx.restore();
+            }
+
+            // ══════════ EXECUTION CURSOR ══════════
+            let cursorPos = -1;
+            if (t >= 7800) {
+                if (t < 9500) cursorPos = lerp(0, posAccess, easeInOut(prog(7800, 9500)));
+                else if (t < 16000) cursorPos = posAccess;
+                else if (t < 20000) cursorPos = lerp(posAccess, posDecl, easeInOut(prog(16000, 20000)));
+                else cursorPos = posDecl;
+            }
+
+            if (cursorPos >= 0) {
+                const cx = tlX + tlW * cursorPos;
+                ctx.save(); ctx.globalAlpha = tlA;
+                ctx.fillStyle = t >= 16000 ? COL.green : (t >= 9200 && t < 16000 ? COL.red : COL.blue);
+                ctx.beginPath(); ctx.moveTo(cx, tlY + 8); ctx.lineTo(cx - 8, tlY + 22); ctx.lineTo(cx + 8, tlY + 22); ctx.closePath(); ctx.fill();
+                ctx.font = '600 12px "Segoe UI",system-ui,sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('▲ execution', cx, tlY + 38);
+                ctx.restore();
+            }
+            ctx.restore(); // end timeline
+
+            // ══════════ REGISTRATION BOX ══════════
+            const regBoxX = 740, regBoxY = 380, regBoxW = 500, regBoxH = 100;
+            if (t >= 3000) {
+                const rIn = easeOutBack(prog(3000, 4000));
+                const rOut = t >= 20500 ? 1 - easeOut(prog(20500, 21500)) : 1;
+                ctx.save(); ctx.globalAlpha = rIn * rOut;
+                const sc = 0.7 + 0.3 * rIn;
+                ctx.translate(regBoxX + regBoxW / 2, regBoxY + regBoxH / 2);
+                ctx.scale(sc, sc);
+                ctx.translate(-(regBoxX + regBoxW / 2), -(regBoxY + regBoxH / 2));
+
+                ctx.fillStyle = '#FFFBEB'; ctx.strokeStyle = '#F59E0B80'; ctx.lineWidth = 1.5;
+                rr(regBoxX, regBoxY, regBoxW, regBoxH, 12); ctx.fill(); ctx.stroke();
+
+                ctx.font = '24px "Segoe UI"'; ctx.textAlign = 'left'; ctx.fillText('📦', regBoxX + 18, regBoxY + 42);
+                ctx.font = '600 17px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.text;
+                ctx.fillText('let score', regBoxX + 56, regBoxY + 38);
+                ctx.font = '400 14px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.orange;
+                ctx.fillText('Registered in scope — but NOT yet initialized', regBoxX + 56, regBoxY + 62);
+                ctx.fillStyle = COL.redLight; rr(regBoxX + 56, regBoxY + 72, 106, 22, 5); ctx.fill();
+                ctx.font = '600 12px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.redDark;
+                ctx.fillText('⛔ Unavailable', regBoxX + 60, regBoxY + 87);
+                ctx.restore();
+            }
+
+            // ══════════ ERROR PANEL ══════════
+            if (t >= 9500 && t <= 16500) {
+                const eIn = easeOutBack(prog(9500, 10500));
+                const eOut = 1 - easeOut(prog(15500, 16500));
+                const eA = Math.min(eIn, eOut);
+                const epX2 = 700, epY2 = 520, epW2 = 560, epH2 = 180;
+
+                ctx.save(); ctx.globalAlpha = eA;
+                ctx.shadowColor = COL.red; ctx.shadowBlur = 30 * eA;
+                ctx.fillStyle = COL.bg; rr(epX2, epY2, epW2, epH2, 14); ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = COL.red; ctx.lineWidth = 2;
+                rr(epX2, epY2, epW2, epH2, 14); ctx.stroke();
+
+                ctx.fillStyle = COL.red; rr(epX2, epY2, epW2, 48, 14); ctx.fill();
+                ctx.fillRect(epX2, epY2 + 36, epW2, 12);
+
+                const shake = t >= 10000 && t <= 11000 ? Math.sin(t * 0.05) * 3 : 0;
+                ctx.save(); ctx.translate(shake, 0);
+                ctx.font = '22px "Segoe UI"'; ctx.textAlign = 'left'; ctx.fillStyle = '#fff';
+                ctx.fillText('⚠', epX2 + 16, epY2 + 34);
+                ctx.font = '700 16px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = '#fff';
+                ctx.fillText('ReferenceError', epX2 + 46, epY2 + 34);
+                ctx.restore();
+
+                ctx.font = '500 16px "SF Mono","Fira Code",Consolas,monospace';
+                ctx.fillStyle = COL.redDark; ctx.textAlign = 'left';
+
+                const typeP = clamp(prog(10500, 12000));
+                const m1 = "Cannot access 'score'";
+                const m2 = "before initialization";
+                ctx.fillText(m1.substring(0, Math.floor(typeP * m1.length)), epX2 + 24, epY2 + 85);
+                if (typeP > 0.5) {
+                    const tp2 = clamp((typeP - .5) * 2);
+                    ctx.fillText(m2.substring(0, Math.floor(tp2 * m2.length)), epX2 + 24, epY2 + 112);
+                }
+
+                // blink cursor
+                if (typeP < 1 && Math.sin(t * 0.008) > 0) {
+                    const curLine = typeP <= 0.5;
+                    const curTxt = curLine ? m1.substring(0, Math.floor(typeP * m1.length)) : m2.substring(0, Math.floor(clamp((typeP - .5) * 2) * m2.length));
+                    const curY2 = curLine ? epY2 + 85 : epY2 + 112;
+                    ctx.fillStyle = COL.redDark;
+                    ctx.fillRect(epX2 + 24 + ctx.measureText(curTxt).width + 2, curY2 - 14, 2, 18);
+                }
+
+                // arrow from code
+                if (t >= 10000 && t <= 15000) {
+                    const aP2 = easeOut(prog(10000, 10800));
+                    const aF2 = 1 - prog(14500, 15000);
+                    drawArrow(cpX + cpW + 10, lineStartY + 2 * lineH + 5, epX2 - 10, epY2 + epH2 / 2, COL.red, aP2 * aF2 * 0.6, 2);
+                }
+
+                ctx.font = '400 13px "SF Mono","Fira Code",Consolas,monospace';
+                ctx.fillStyle = COL.textLight;
+                ctx.fillText('// Line 3: console.log(score)', epX2 + 24, epY2 + 150);
+                ctx.restore();
+            }
+
+            // ══════════ TDZ DISSOLVE PARTICLES ══════════
+            if (t >= 20000 && t <= 22000) {
+                const pP = prog(20000, 22000);
+                ctx.save();
+                for (let i = 0; i < 30; i++) {
+                    const seed = i * 137.508;
+                    const px = tlX + (declX - tlX) * (Math.sin(seed) * 0.5 + 0.5);
+                    const py = tlY - 40 + 80 * (Math.cos(seed * 2) * 0.5 + 0.5);
+                    const dx = (Math.sin(seed * 3) - .5) * 200 * pP;
+                    const dy = (Math.cos(seed * 7) - .5) * 150 * pP - 60 * pP;
+                    ctx.globalAlpha = (1 - pP) * 0.4;
+                    ctx.fillStyle = COL.red;
+                    ctx.beginPath(); ctx.arc(px + dx, py + dy, (3 + 2 * Math.sin(seed)) * (1 - pP), 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // ══════════ SUCCESS: score → 95 ══════════
+            if (t >= 21000) {
+                const sIn = easeOutBack(prog(21000, 22000));
+                const spX2 = 700, spY2 = 380, spW2 = 520, spH2 = 120;
+                ctx.save(); ctx.globalAlpha = sIn;
+                ctx.shadowColor = COL.green; ctx.shadowBlur = 20 * sIn;
+                ctx.fillStyle = '#F0FDF4'; rr(spX2, spY2, spW2, spH2, 14); ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = COL.green + '80'; ctx.lineWidth = 2;
+                rr(spX2, spY2, spW2, spH2, 14); ctx.stroke();
+
+                ctx.font = '28px "Segoe UI"'; ctx.textAlign = 'left'; ctx.fillText('✅', spX2 + 18, spY2 + 50);
+                ctx.font = '600 20px "SF Mono","Fira Code",Consolas,monospace'; ctx.fillStyle = COL.greenDark;
+                ctx.fillText('score', spX2 + 62, spY2 + 46);
+                ctx.font = '400 26px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.gray;
+                ctx.fillText('→', spX2 + 148, spY2 + 48);
+
+                const vP = easeOutElastic(prog(21500, 22800));
+                ctx.save();
+                const vx2 = spX2 + 190, vy2 = spY2 + 48;
+                ctx.translate(vx2, vy2); ctx.scale(.5 + .5 * vP, .5 + .5 * vP); ctx.translate(-vx2, -vy2);
+                ctx.font = '700 28px "SF Mono","Fira Code",Consolas,monospace'; ctx.fillStyle = '#059669';
+                ctx.fillText('95', vx2, vy2);
+                ctx.restore();
+
+                ctx.font = '400 14px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.green;
+                ctx.fillText('Variable is now initialized and accessible!', spX2 + 62, spY2 + 80);
+                ctx.fillStyle = COL.greenLight; rr(spX2 + 62, spY2 + 90, 96, 22, 5); ctx.fill();
+                ctx.font = '600 12px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.greenDark;
+                ctx.fillText('✓ Available', spX2 + 66, spY2 + 105);
+                ctx.restore();
+            }
+
+            // ══════════ KEY CONCEPTS ══════════
+            if (t >= 24000) {
+                const kA = easeOut(prog(24000, 25000));
+                const kX = 80, kY = 540, kW = 520, kH = 300;
+                ctx.save(); ctx.globalAlpha = kA;
+                ctx.fillStyle = COL.purpleLight; ctx.strokeStyle = COL.purple + '40'; ctx.lineWidth = 1.5;
+                rr(kX, kY, kW, kH, 14); ctx.fill(); ctx.stroke();
+                ctx.font = '700 18px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.purple; ctx.textAlign = 'left';
+                ctx.fillText('💡 Key Concepts', kX + 20, kY + 32);
+
+                const concepts = [
+                    { icon: '1️⃣', text: 'let and const are hoisted but NOT initialized' },
+                    { icon: '2️⃣', text: 'The TDZ spans from scope start → declaration' },
+                    { icon: '3️⃣', text: 'Accessing a variable in the TDZ throws an error' },
+                    { icon: '4️⃣', text: 'var is hoisted AND initialized to undefined' },
+                    { icon: '5️⃣', text: 'TDZ exists to catch bugs early!' },
+                ];
+                concepts.forEach((c, i) => {
+                    const del = 24200 + i * 350;
+                    const cA2 = easeOut(prog(del, del + 500));
+                    ctx.save(); ctx.globalAlpha = kA * cA2;
+                    const cy2 = kY + 60 + i * 46;
+                    ctx.font = '16px "Segoe UI"'; ctx.fillText(c.icon, kX + 24, cy2 + 5);
+                    ctx.font = '400 15px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.text;
+                    ctx.fillText(c.text, kX + 52, cy2 + 4);
+                    ctx.restore();
+                });
+                ctx.restore();
+            }
+
+            // ══════════ COMPARISON TABLE ══════════
+            if (t >= 25000) {
+                const compA = easeOut(prog(25000, 26200));
+                const cx2 = 1300, cy2 = 400, cw2 = 540, ch2 = 430;
+                ctx.save(); ctx.globalAlpha = compA;
+                ctx.fillStyle = '#F8FAFC'; ctx.strokeStyle = COL.grayBorder; ctx.lineWidth = 1;
+                rr(cx2, cy2, cw2, ch2, 14); ctx.fill(); ctx.stroke();
+
+                ctx.font = '700 18px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.text; ctx.textAlign = 'center';
+                ctx.fillText('var  vs  let / const', cx2 + cw2 / 2, cy2 + 34);
+
+                const c1x = cx2 + 20, c2x = cx2 + cw2 / 2 + 10, colW = cw2 / 2 - 30;
+                ctx.fillStyle = COL.blueLight; rr(c1x, cy2 + 50, colW, 30, 6); ctx.fill();
+                ctx.font = '700 14px "SF Mono",Consolas,monospace'; ctx.fillStyle = COL.blue; ctx.textAlign = 'center';
+                ctx.fillText('var', c1x + colW / 2, cy2 + 70);
+
+                ctx.fillStyle = COL.greenLight; rr(c2x, cy2 + 50, colW, 30, 6); ctx.fill();
+                ctx.fillStyle = COL.greenDark; ctx.fillText('let / const', c2x + colW / 2, cy2 + 70);
+
+                const rows = [
+                    ['Hoisted: ✓', 'Hoisted: ✓'],
+                    ['Init: undefined', 'Init: ✗ (none)'],
+                    ['Access before: ✓', 'Access before: ✗'],
+                    ['TDZ: None', 'TDZ: Yes'],
+                    ['Result: undefined', 'Result: ReferenceError'],
+                ];
+                ctx.textAlign = 'left';
+                rows.forEach((row, i) => {
+                    const rDel = 25500 + i * 300;
+                    const rA = easeOut(prog(rDel, rDel + 500));
+                    ctx.save(); ctx.globalAlpha = compA * rA;
+                    const ry = cy2 + 100 + i * 42;
+
+                    // var cell
+                    ctx.font = '400 13px "Segoe UI",system-ui,sans-serif';
+                    ctx.fillStyle = i % 2 === 0 ? '#F8FAFC' : COL.bg;
+                    rr(c1x, ry, colW, 34, 4); ctx.fill();
+                    ctx.fillStyle = COL.textMed; ctx.fillText(row[0], c1x + 10, ry + 22);
+
+                    // let cell
+                    ctx.fillStyle = i % 2 === 0 ? '#F8FAFC' : COL.bg;
+                    rr(c2x, ry, colW, 34, 4); ctx.fill();
+                    ctx.fillStyle = row[1].includes('✗') || row[1].includes('Error') ? COL.redDark : COL.textMed;
+                    ctx.fillText(row[1], c2x + 10, ry + 22);
+
+                    ctx.restore();
+                });
+
+                // Tip at bottom
+                if (t >= 27000) {
+                    const tipA = easeOut(prog(27000, 27800));
+                    ctx.save(); ctx.globalAlpha = compA * tipA;
+                    ctx.fillStyle = '#FEF3C7'; rr(cx2 + 15, cy2 + ch2 - 50, cw2 - 30, 36, 8); ctx.fill();
+                    ctx.font = '500 13px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = '#92400E'; ctx.textAlign = 'center';
+                    ctx.fillText('💡 Prefer let/const — TDZ helps you write safer code!', cx2 + cw2 / 2, cy2 + ch2 - 27);
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+
+            // ══════════ COMPLETION BADGE ══════════
+            if (t >= 27500) {
+                const doneA = easeOutBack(prog(27500, 28000));
+                ctx.save(); ctx.globalAlpha = doneA;
+                ctx.fillStyle = '#F0FDF4'; ctx.strokeStyle = COL.green; ctx.lineWidth = 2;
+                rr(W / 2 - 160, H - 110, 320, 50, 12); ctx.fill(); ctx.stroke();
+                ctx.font = '600 18px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle = COL.greenDark; ctx.textAlign = 'center';
+                ctx.fillText('✨ Animation Complete!', W / 2, H - 80);
+                ctx.restore();
+            }
+        }
+
+        // ── State management ──
+        function updateCurrentState() {
+            let idx = 0;
+            for (let i = STATES.length - 1; i >= 0; i--) {
+                if (t >= STATES[i].time) { idx = i; break; }
+            }
+            currentStateIdx = idx;
+            updateUI();
+        }
+
+        function updateUI() {
+            // Update buttons
+            document.querySelectorAll('.state-btn').forEach(btn => {
+                const si = parseInt(btn.dataset.state);
+                btn.classList.toggle('active', si === currentStateIdx);
+            });
+            // Update slider
+            document.getElementById('timeSlider').value = t;
+            // Update time label
+            document.getElementById('timeLabel').textContent = (t / 1000).toFixed(1) + 's';
+            // Update state indicator
+            const state = STATES[currentStateIdx];
+            const indic = document.getElementById('stateIndicator');
+            indic.textContent = `${state.id + 1}. ${state.name}`;
+
+            if (currentStateIdx <= 3) indic.style.background = '#EEF2FF', indic.style.color = '#4338CA';
+            else if (currentStateIdx <= 8) indic.style.background = '#FEF2F2', indic.style.color = '#B91C1C';
+            else if (currentStateIdx <= 12) indic.style.background = '#F0FDF4', indic.style.color = '#065F46';
+            else indic.style.background = '#FFFBEB', indic.style.color = '#92400E';
+        }
+
+        function goToState(idx) {
+            idx = Math.max(0, Math.min(STATES.length - 1, idx));
+            t = STATES[idx].time;
+            playing = false;
+            lastTS = 0;
+            document.getElementById('playBtn').textContent = '▶ Play';
+            updateCurrentState();
+            draw();
+        }
+
+        // ── Event listeners ──
+        document.querySelectorAll('.state-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                goToState(parseInt(btn.dataset.state));
+            });
+        });
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (t >= DUR) { t = 0; updateCurrentState(); }
+            playing = !playing;
+            lastTS = 0;
+            document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            t = 0; playing = false; lastTS = 0;
+            document.getElementById('playBtn').textContent = '▶ Play';
+            updateCurrentState(); draw();
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            goToState(currentStateIdx - 1);
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            goToState(currentStateIdx + 1);
+        });
+
+        document.getElementById('timeSlider').addEventListener('input', e => {
+            t = parseInt(e.target.value);
+            playing = false; lastTS = 0;
+            document.getElementById('playBtn').textContent = '▶ Play';
+            updateCurrentState(); draw();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight') { e.preventDefault(); goToState(currentStateIdx + 1); }
+            else if (e.key === 'ArrowLeft') { e.preventDefault(); goToState(currentStateIdx - 1); }
+            else if (e.key === ' ') {
+                e.preventDefault();
+                if (t >= DUR) { t = 0; updateCurrentState(); }
+                playing = !playing; lastTS = 0;
+                document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+            }
+            else if (e.key === 'Home') { e.preventDefault(); goToState(0); }
+            else if (e.key === 'End') { e.preventDefault(); goToState(STATES.length - 1); }
+            else if (e.key >= '1' && e.key <= '9') {
+                e.preventDefault(); goToState(parseInt(e.key) - 1);
+            }
+            else if (e.key === '0') { e.preventDefault(); goToState(9); }
+        });
+
+        // ── Main loop ──
+        function loop(ts) {
+            if (!lastTS) lastTS = ts;
+            const dt = ts - lastTS;
+            lastTS = ts;
+
+            if (playing) {
+                t += dt;
+                if (t >= DUR) {
+                    t = DUR; playing = false;
+                    document.getElementById('playBtn').textContent = '▶ Replay';
+                }
+                updateCurrentState();
+            }
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        updateCurrentState();
+        draw();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

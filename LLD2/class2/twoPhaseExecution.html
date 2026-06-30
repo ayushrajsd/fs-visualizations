@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Two-Phase Execution Model</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #ffffff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #canvas-container {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+            transform-origin: center center;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        #controls button {
+            padding: 10px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        #playBtn {
+            background: #2563EB;
+            color: white;
+        }
+
+        #playBtn:hover {
+            background: #1d4ed8;
+        }
+
+        #resetBtn {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        #resetBtn:hover {
+            background: #d1d5db;
+        }
+
+        #progressBar {
+            position: fixed;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            z-index: 100;
+        }
+
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #2563EB, #F97316);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container">
+        <canvas id="animCanvas" width="1920" height="1080"></canvas>
+    </div>
+
+    <div id="progressBar">
+        <div id="progressFill"></div>
+    </div>
+
+    <div id="controls">
+        <button id="playBtn">▶ Play Animation</button>
+        <button id="resetBtn">↻ Reset</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('animCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        function resizeCanvas() {
+            const scaleX = window.innerWidth / 1920;
+            const scaleY = (window.innerHeight - 80) / 1080;
+            const scale = Math.min(scaleX, scaleY, 1);
+            container.style.transform = `scale(${scale})`;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Colors
+        const BLUE = '#2563EB';
+        const BLUE_LIGHT = '#DBEAFE';
+        const BLUE_DARK = '#1e40af';
+        const ORANGE = '#F97316';
+        const ORANGE_LIGHT = '#FFF7ED';
+        const ORANGE_DARK = '#c2410c';
+        const GRAY = '#6B7280';
+        const GRAY_LIGHT = '#F3F4F6';
+        const GRAY_BORDER = '#D1D5DB';
+        const TEXT_DARK = '#1F2937';
+        const TEXT_MED = '#4B5563';
+        const WHITE = '#FFFFFF';
+        const GREEN = '#10B981';
+
+        // Animation state
+        let animTime = 0;
+        let isPlaying = false;
+        let animationId = null;
+        const TOTAL_DURATION = 23000; // 23 seconds
+        let lastTimestamp = 0;
+
+        // Easing functions
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+        function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+        function easeOutBack(t) { const c1 = 1.70158; const c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
+        function easeOutElastic(t) {
+            if (t === 0 || t === 1) return t;
+            return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI) / 3) + 1;
+        }
+
+        function lerp(a, b, t) { return a + (b - a) * Math.clamp(t, 0, 1); }
+        Math.clamp = function (v, min, max) { return Math.max(min, Math.min(max, v)); };
+
+        function progress(start, end) {
+            if (animTime < start) return 0;
+            if (animTime > end) return 1;
+            return (animTime - start) / (end - start);
+        }
+
+        // Draw helpers
+        function roundRect(x, y, w, h, r) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+        }
+
+        function drawGlow(x, y, w, h, color, intensity) {
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 20 * intensity;
+            ctx.fillStyle = color + '20';
+            roundRect(x - 4, y - 4, w + 8, h + 8, 10);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawArrow(fromX, fromY, toX, toY, color, alpha, lineWidth = 2) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = lineWidth;
+
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            const headLen = 12;
+
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawDashedArrow(fromX, fromY, toX, toY, color, alpha, dashOffset = 0) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 6]);
+            ctx.lineDashOffset = -dashOffset;
+
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            const headLen = 12;
+
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headLen * Math.cos(angle - Math.PI / 6), toY - headLen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(toX - headLen * Math.cos(angle + Math.PI / 6), toY - headLen * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Code lines
+        const codeLines = [
+            { text: 'console.log(x);', num: '1' },
+            { text: 'var x = 10;', num: '2' }
+        ];
+
+        // --- MAIN DRAW ---
+        function draw() {
+            ctx.clearRect(0, 0, 1920, 1080);
+            ctx.fillStyle = WHITE;
+            ctx.fillRect(0, 0, 1920, 1080);
+
+            // Title
+            const titleAlpha = easeOutCubic(progress(0, 800));
+            ctx.save();
+            ctx.globalAlpha = titleAlpha;
+            ctx.font = '600 32px "Segoe UI", system-ui, sans-serif';
+            ctx.fillStyle = TEXT_DARK;
+            ctx.textAlign = 'center';
+            ctx.fillText('JavaScript Two-Phase Execution Model', 960, 55);
+
+            // Subtitle line
+            ctx.strokeStyle = GRAY_BORDER;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(560, 72);
+            ctx.lineTo(1360, 72);
+            ctx.stroke();
+            ctx.restore();
+
+            // --- LEFT: Code Panel ---
+            const panelY = 95;
+            const codeX = 80;
+            const codeW = 480;
+            const codeH = 260;
+
+            const codeAlpha = easeOutCubic(progress(300, 1100));
+            ctx.save();
+            ctx.globalAlpha = codeAlpha;
+
+            // Code panel background
+            ctx.fillStyle = '#F8FAFC';
+            ctx.strokeStyle = GRAY_BORDER;
+            ctx.lineWidth = 1;
+            roundRect(codeX, panelY, codeW, codeH, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            // Code panel header
+            ctx.fillStyle = GRAY_LIGHT;
+            roundRect(codeX, panelY, codeW, 40, 12);
+            ctx.fill();
+            // clip bottom corners of header
+            ctx.fillStyle = GRAY_LIGHT;
+            ctx.fillRect(codeX, panelY + 28, codeW, 12);
+
+            ctx.strokeStyle = GRAY_BORDER;
+            ctx.beginPath();
+            ctx.moveTo(codeX, panelY + 40);
+            ctx.lineTo(codeX + codeW, panelY + 40);
+            ctx.stroke();
+
+            // Header dots
+            const dotColors = ['#EF4444', '#F59E0B', '#22C55E'];
+            dotColors.forEach((c, i) => {
+                ctx.fillStyle = c;
+                ctx.beginPath();
+                ctx.arc(codeX + 20 + i * 22, panelY + 20, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.font = '500 13px "Segoe UI", system-ui, sans-serif';
+            ctx.fillStyle = GRAY;
+            ctx.textAlign = 'center';
+            ctx.fillText('script.js', codeX + codeW / 2, panelY + 25);
+
+            ctx.restore();
+
+            // Code lines
+            const lineStartY = panelY + 70;
+            const lineHeight = 50;
+
+            // Scanner indicator
+            const scanPhase = progress(1500, 3200);
+            const scanActive = animTime >= 1500 && animTime <= 3200;
+
+            for (let i = 0; i < codeLines.length; i++) {
+                const line = codeLines[i];
+                const ly = lineStartY + i * lineHeight;
+
+                ctx.save();
+                ctx.globalAlpha = codeAlpha;
+
+                // Highlight logic
+                let highlightColor = null;
+                let highlightIntensity = 0;
+
+                // Creation phase scanning line 2 (var x = 10)
+                if (i === 1 && animTime >= 2400 && animTime <= 4500) {
+                    const hp = progress(2400, 3000);
+                    const hpOut = 1 - progress(4000, 4500);
+                    highlightIntensity = Math.min(easeOutCubic(hp), hpOut);
+                    highlightColor = BLUE;
+                }
+
+                // Execution phase: highlight line 1 (console.log)
+                if (i === 0 && animTime >= 11000 && animTime <= 15500) {
+                    const hp = progress(11000, 11600);
+                    const hpOut = 1 - progress(15000, 15500);
+                    highlightIntensity = Math.min(easeOutCubic(hp), hpOut);
+                    highlightColor = ORANGE;
+                }
+
+                // Execution phase: highlight line 2 (x = 10)
+                if (i === 1 && animTime >= 17000 && animTime <= 20500) {
+                    const hp = progress(17000, 17600);
+                    const hpOut = 1 - progress(20000, 20500);
+                    highlightIntensity = Math.min(easeOutCubic(hp), hpOut);
+                    highlightColor = ORANGE;
+                }
+
+                if (highlightColor && highlightIntensity > 0) {
+                    drawGlow(codeX + 12, ly - 14, codeW - 24, 36, highlightColor, highlightIntensity);
+                    ctx.globalAlpha = codeAlpha;
+
+                    ctx.fillStyle = (highlightColor === BLUE ? BLUE_LIGHT : ORANGE_LIGHT);
+                    ctx.globalAlpha = codeAlpha * highlightIntensity * 0.7;
+                    roundRect(codeX + 12, ly - 14, codeW - 24, 36, 6);
+                    ctx.fill();
+                    ctx.globalAlpha = codeAlpha;
+
+                    ctx.strokeStyle = highlightColor + '60';
+                    ctx.lineWidth = 1.5;
+                    roundRect(codeX + 12, ly - 14, codeW - 24, 36, 6);
+                    ctx.stroke();
+                }
+
+                // Line number
+                ctx.font = '400 15px "SF Mono", "Fira Code", "Consolas", monospace';
+                ctx.fillStyle = '#9CA3AF';
+                ctx.textAlign = 'right';
+                ctx.fillText(line.num, codeX + 42, ly + 5);
+
+                // Code text with syntax coloring
+                ctx.textAlign = 'left';
+                const tx = codeX + 60;
+                if (i === 0) {
+                    ctx.font = '500 16px "SF Mono", "Fira Code", "Consolas", monospace';
+                    ctx.fillStyle = '#7C3AED'; // purple for console
+                    ctx.fillText('console', tx, ly + 5);
+                    ctx.fillStyle = TEXT_DARK;
+                    ctx.fillText('.', tx + ctx.measureText('console').width, ly + 5);
+                    ctx.fillStyle = '#2563EB';
+                    ctx.fillText('log', tx + ctx.measureText('console.').width, ly + 5);
+                    ctx.fillStyle = TEXT_DARK;
+                    ctx.fillText('(', tx + ctx.measureText('console.log').width, ly + 5);
+                    ctx.fillStyle = ORANGE_DARK;
+                    ctx.fillText('x', tx + ctx.measureText('console.log(').width, ly + 5);
+                    ctx.fillStyle = TEXT_DARK;
+                    ctx.fillText(');', tx + ctx.measureText('console.log(x').width, ly + 5);
+                } else {
+                    ctx.font = '500 16px "SF Mono", "Fira Code", "Consolas", monospace';
+                    ctx.fillStyle = '#2563EB';
+                    ctx.fillText('var', tx, ly + 5);
+                    ctx.fillStyle = ORANGE_DARK;
+                    ctx.fillText(' x', tx + ctx.measureText('var').width, ly + 5);
+                    ctx.fillStyle = TEXT_DARK;
+                    ctx.fillText(' = ', tx + ctx.measureText('var x').width, ly + 5);
+                    ctx.fillStyle = '#059669';
+                    ctx.fillText('10', tx + ctx.measureText('var x = ').width, ly + 5);
+                    ctx.fillStyle = TEXT_DARK;
+                    ctx.fillText(';', tx + ctx.measureText('var x = 10').width, ly + 5);
+                }
+
+                ctx.restore();
+            }
+
+            // Scanner line
+            if (scanActive) {
+                const scanY = lineStartY - 20 + easeInOutCubic(scanPhase) * (lineHeight * 2 + 10);
+                ctx.save();
+                ctx.globalAlpha = 0.6;
+                ctx.strokeStyle = BLUE;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.beginPath();
+                ctx.moveTo(codeX + 10, scanY);
+                ctx.lineTo(codeX + codeW - 10, scanY);
+                ctx.stroke();
+
+                // Small engine icon on the left
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 0.9;
+                ctx.fillStyle = BLUE;
+                roundRect(codeX - 50, scanY - 14, 48, 28, 6);
+                ctx.fill();
+                ctx.font = '600 11px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = WHITE;
+                ctx.textAlign = 'center';
+                ctx.fillText('JS ⚙', codeX - 26, scanY + 4);
+                ctx.restore();
+            }
+
+            // --- PHASE SECTIONS (right side) ---
+            const rightX = 620;
+            const sectionW = 620;
+            const sectionH = 420;
+            const sectionGap = 40;
+
+            // CREATION PHASE
+            const creationAlpha = easeOutCubic(progress(1200, 2000));
+            const creationActive = animTime >= 1200;
+
+            // Phase panels
+            const cpX = rightX;
+            const cpY = panelY;
+            const cpW = sectionW;
+            const cpH = sectionH;
+
+            ctx.save();
+            ctx.globalAlpha = creationAlpha;
+
+            // Creation phase panel
+            ctx.fillStyle = '#FAFBFF';
+            ctx.strokeStyle = animTime >= 1200 && animTime <= 9000 ? BLUE : GRAY_BORDER;
+            ctx.lineWidth = animTime >= 1200 && animTime <= 9000 ? 2 : 1;
+            roundRect(cpX, cpY, cpW, cpH, 12);
+            ctx.fill();
+            ctx.stroke();
+
+            // Phase label
+            const phaseLabelY = cpY + 35;
+            ctx.fillStyle = BLUE;
+            roundRect(cpX + 20, phaseLabelY - 18, 12, 24, 3);
+            ctx.fill();
+
+            ctx.font = '700 20px "Segoe UI", system-ui, sans-serif';
+            ctx.fillStyle = BLUE;
+            ctx.textAlign = 'left';
+            ctx.fillText('Creation Phase', cpX + 44, phaseLabelY + 4);
+
+            ctx.font = '400 14px "Segoe UI", system-ui, sans-serif';
+            ctx.fillStyle = GRAY;
+            ctx.fillText('Engine scans for declarations', cpX + 44, phaseLabelY + 26);
+
+            // Step indicator
+            if (animTime >= 2400) {
+                const stepAlpha = easeOutCubic(progress(2400, 3000));
+                ctx.globalAlpha = creationAlpha * stepAlpha;
+
+                // "Found: var x" label
+                ctx.font = '500 15px "SF Mono", "Fira Code", "Consolas", monospace';
+                ctx.fillStyle = BLUE_DARK;
+                ctx.fillText('Found: ', cpX + 44, phaseLabelY + 60);
+                ctx.fillStyle = '#2563EB';
+                ctx.fillText('var x', cpX + 44 + ctx.measureText('Found: ').width, phaseLabelY + 60);
+
+                // Arrow from code to this
+                if (animTime >= 2800 && animTime <= 5000) {
+                    const arrowAlpha = easeOutCubic(progress(2800, 3400)) * (1 - progress(4500, 5000));
+                    drawDashedArrow(codeX + codeW + 10, lineStartY + lineHeight + 5, cpX + 34, phaseLabelY + 55, BLUE, arrowAlpha, animTime * 0.03);
+                }
+            }
+
+            ctx.globalAlpha = creationAlpha;
+
+            // Memory box
+            if (animTime >= 3500) {
+                const boxAppear = easeOutBack(progress(3500, 4300));
+                const memBoxX = cpX + 50;
+                const memBoxY = phaseLabelY + 85;
+                const memBoxW = cpW - 100;
+                const memBoxH = 80;
+
+                ctx.save();
+                ctx.globalAlpha = creationAlpha * boxAppear;
+
+                // Transform for scale animation
+                const scale = 0.5 + 0.5 * boxAppear;
+                ctx.translate(memBoxX + memBoxW / 2, memBoxY + memBoxH / 2);
+                ctx.scale(scale, scale);
+                ctx.translate(-(memBoxX + memBoxW / 2), -(memBoxY + memBoxH / 2));
+
+                // Glow
+                if (animTime >= 3500 && animTime <= 6000) {
+                    const glowPulse = 0.5 + 0.5 * Math.sin(animTime * 0.004);
+                    drawGlow(memBoxX, memBoxY, memBoxW, memBoxH, BLUE, glowPulse * 0.5);
+                }
+
+                // Box
+                ctx.fillStyle = WHITE;
+                ctx.strokeStyle = BLUE;
+                ctx.lineWidth = 2;
+                roundRect(memBoxX, memBoxY, memBoxW, memBoxH, 10);
+                ctx.fill();
+                ctx.stroke();
+
+                // Label "Memory"
+                ctx.font = '600 12px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = BLUE;
+                ctx.textAlign = 'left';
+                ctx.fillText('MEMORY', memBoxX + 15, memBoxY - 8);
+
+                // Variable name
+                ctx.font = '600 22px "SF Mono", "Fira Code", "Consolas", monospace';
+                ctx.fillStyle = TEXT_DARK;
+                ctx.textAlign = 'center';
+                ctx.fillText('x', memBoxX + memBoxW * 0.3, memBoxY + memBoxH / 2 + 7);
+
+                // Arrow
+                ctx.font = '400 26px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = GRAY;
+                ctx.fillText('→', memBoxX + memBoxW * 0.5, memBoxY + memBoxH / 2 + 8);
+
+                // Value - changes from undefined to 10
+                const valueChangeProgress = easeOutCubic(progress(18500, 19500));
+
+                if (valueChangeProgress < 1) {
+                    // Show undefined
+                    ctx.save();
+                    ctx.globalAlpha *= (1 - valueChangeProgress);
+                    ctx.font = '600 20px "SF Mono", "Fira Code", "Consolas", monospace';
+                    ctx.fillStyle = '#9CA3AF';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('undefined', memBoxX + memBoxW * 0.72, memBoxY + memBoxH / 2 + 7);
+                    ctx.restore();
+                }
+                if (valueChangeProgress > 0) {
+                    // Show 10
+                    ctx.save();
+                    ctx.globalAlpha *= valueChangeProgress;
+                    ctx.font = '700 24px "SF Mono", "Fira Code", "Consolas", monospace';
+                    ctx.fillStyle = '#059669';
+                    ctx.textAlign = 'center';
+
+                    const bounceScale = 1 + 0.15 * Math.sin(valueChangeProgress * Math.PI);
+                    const valX = memBoxX + memBoxW * 0.72;
+                    const valY = memBoxY + memBoxH / 2 + 8;
+                    ctx.translate(valX, valY);
+                    ctx.scale(bounceScale, bounceScale);
+                    ctx.translate(-valX, -valY);
+
+                    ctx.fillText('10', valX, valY);
+
+                    // Green glow when updating
+                    if (animTime >= 18500 && animTime <= 20500) {
+                        drawGlow(memBoxX, memBoxY, memBoxW, memBoxH, GREEN, 0.6 * (1 - progress(19500, 20500)));
+                    }
+
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+
+            // Checkmark when creation phase done
+            if (animTime >= 6000 && animTime <= 9500) {
+                const checkAlpha = easeOutCubic(progress(6000, 6600)) * (1 - progress(9000, 9500));
+                ctx.save();
+                ctx.globalAlpha = creationAlpha * checkAlpha;
+                ctx.font = '500 15px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = GREEN;
+                ctx.textAlign = 'left';
+                ctx.fillText('✓ Hoisting complete', cpX + 44, cpY + cpH - 30);
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            // EXECUTION PHASE
+            const epX = rightX + sectionW + sectionGap;
+            const epY = panelY;
+            const epW = sectionW;
+            const epH = sectionH;
+
+            const execAlpha = easeOutCubic(progress(8000, 9000));
+
+            if (animTime >= 8000) {
+                ctx.save();
+                ctx.globalAlpha = execAlpha;
+
+                // Panel
+                ctx.fillStyle = '#FFFCF8';
+                ctx.strokeStyle = animTime >= 9000 ? ORANGE : GRAY_BORDER;
+                ctx.lineWidth = animTime >= 9000 ? 2 : 1;
+                roundRect(epX, epY, epW, epH, 12);
+                ctx.fill();
+                ctx.stroke();
+
+                // Phase label
+                const eLabelY = epY + 35;
+                ctx.fillStyle = ORANGE;
+                roundRect(epX + 20, eLabelY - 18, 12, 24, 3);
+                ctx.fill();
+
+                ctx.font = '700 20px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = ORANGE;
+                ctx.textAlign = 'left';
+                ctx.fillText('Execution Phase', epX + 44, eLabelY + 4);
+
+                ctx.font = '400 14px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = GRAY;
+                ctx.fillText('Engine runs code line by line', epX + 44, eLabelY + 26);
+
+                // Step 1: console.log(x) lookup
+                if (animTime >= 11000) {
+                    const step1Alpha = easeOutCubic(progress(11000, 11800));
+                    ctx.save();
+                    ctx.globalAlpha = execAlpha * step1Alpha;
+
+                    ctx.font = '500 15px "SF Mono", "Fira Code", "Consolas", monospace';
+                    ctx.fillStyle = ORANGE_DARK;
+                    ctx.textAlign = 'left';
+                    ctx.fillText('→ console.log(x)', epX + 44, eLabelY + 60);
+
+                    // Lookup label
+                    if (animTime >= 12000) {
+                        const lookupAlpha = easeOutCubic(progress(12000, 12800));
+                        ctx.globalAlpha = execAlpha * lookupAlpha;
+                        ctx.font = '400 14px "Segoe UI", system-ui, sans-serif';
+                        ctx.fillStyle = GRAY;
+                        ctx.fillText('Looking up x in memory...', epX + 64, eLabelY + 85);
+
+                        // Lookup arrow from execution to memory box
+                        if (animTime >= 12200 && animTime <= 15000) {
+                            const arrowP = easeOutCubic(progress(12200, 13000));
+                            const arrowFade = 1 - progress(14500, 15000);
+                            const memBoxCenterX = cpX + 50 + (cpW - 100) / 2;
+                            const memBoxCenterY = cpY + 35 + 85 + 40;
+                            drawDashedArrow(
+                                epX + 30, eLabelY + 75,
+                                lerp(epX + 30, memBoxCenterX + (cpW - 100) / 2, arrowP),
+                                lerp(eLabelY + 75, memBoxCenterY, arrowP),
+                                ORANGE, arrowP * arrowFade * 0.8, animTime * 0.04
+                            );
+                        }
+
+                        // Found value
+                        if (animTime >= 13200) {
+                            const foundAlpha = easeOutCubic(progress(13200, 13800));
+                            ctx.globalAlpha = execAlpha * foundAlpha;
+                            ctx.font = '500 14px "Segoe UI", system-ui, sans-serif';
+                            ctx.fillStyle = '#9CA3AF';
+                            ctx.fillText('Found: undefined', epX + 64, eLabelY + 108);
+                        }
+                    }
+
+                    ctx.restore();
+                }
+
+                // Console output
+                if (animTime >= 14000) {
+                    const consoleAlpha = easeOutCubic(progress(14000, 14800));
+                    const consoleBoxX = epX + 30;
+                    const consoleBoxY = eLabelY + 130;
+                    const consoleBoxW = epW - 60;
+                    const consoleBoxH = 90;
+
+                    ctx.save();
+                    ctx.globalAlpha = execAlpha * consoleAlpha;
+
+                    // Console box
+                    ctx.fillStyle = '#1F2937';
+                    roundRect(consoleBoxX, consoleBoxY, consoleBoxW, consoleBoxH, 8);
+                    ctx.fill();
+
+                    // Console header
+                    ctx.fillStyle = '#374151';
+                    roundRect(consoleBoxX, consoleBoxY, consoleBoxW, 28, 8);
+                    ctx.fill();
+                    ctx.fillRect(consoleBoxX, consoleBoxY + 20, consoleBoxW, 8);
+
+                    ctx.font = '500 11px "Segoe UI", system-ui, sans-serif';
+                    ctx.fillStyle = '#9CA3AF';
+                    ctx.textAlign = 'left';
+                    ctx.fillText('Console', consoleBoxX + 12, consoleBoxY + 18);
+
+                    // Console output text
+                    if (animTime >= 14500) {
+                        const textAlpha = easeOutCubic(progress(14500, 15000));
+                        ctx.globalAlpha = execAlpha * consoleAlpha * textAlpha;
+                        ctx.font = '500 16px "SF Mono", "Fira Code", "Consolas", monospace';
+                        ctx.fillStyle = '#FCD34D';
+                        ctx.fillText('> undefined', consoleBoxX + 16, consoleBoxY + 58);
+
+                        // Show "10" result after update
+                        if (animTime >= 20000) {
+                            const resultAlpha = easeOutCubic(progress(20000, 20500));
+                            ctx.globalAlpha = execAlpha * resultAlpha;
+                        }
+                    }
+
+                    ctx.restore();
+                }
+
+                // Step 2: x = 10
+                if (animTime >= 17000) {
+                    const step2Alpha = easeOutCubic(progress(17000, 17800));
+                    ctx.save();
+                    ctx.globalAlpha = execAlpha * step2Alpha;
+
+                    ctx.font = '500 15px "SF Mono", "Fira Code", "Consolas", monospace';
+                    ctx.fillStyle = ORANGE_DARK;
+                    ctx.textAlign = 'left';
+                    ctx.fillText('→ x = 10', epX + 44, eLabelY + 260);
+
+                    if (animTime >= 18000) {
+                        const updateAlpha = easeOutCubic(progress(18000, 18600));
+                        ctx.globalAlpha = execAlpha * updateAlpha;
+                        ctx.font = '400 14px "Segoe UI", system-ui, sans-serif';
+                        ctx.fillStyle = GRAY;
+                        ctx.fillText('Updating x in memory...', epX + 64, eLabelY + 285);
+
+                        // Update arrow
+                        if (animTime >= 18200 && animTime <= 20000) {
+                            const arrowP = easeOutCubic(progress(18200, 19000));
+                            const arrowFade = 1 - progress(19500, 20000);
+                            const memBoxCenterX = cpX + 50 + (cpW - 100) / 2;
+                            const memBoxCenterY = cpY + 35 + 85 + 40;
+                            drawDashedArrow(
+                                epX + 30, eLabelY + 275,
+                                lerp(epX + 30, memBoxCenterX + (cpW - 100) / 2, arrowP),
+                                lerp(eLabelY + 275, memBoxCenterY, arrowP),
+                                GREEN, arrowP * arrowFade * 0.8, animTime * 0.04
+                            );
+                        }
+
+                        // Updated confirmation
+                        if (animTime >= 19500) {
+                            const confAlpha = easeOutCubic(progress(19500, 20200));
+                            ctx.globalAlpha = execAlpha * confAlpha;
+                            ctx.font = '500 14px "Segoe UI", system-ui, sans-serif';
+                            ctx.fillStyle = GREEN;
+                            ctx.fillText('✓ Updated: x → 10', epX + 64, eLabelY + 310);
+                        }
+                    }
+
+                    ctx.restore();
+                }
+
+                // Completion
+                if (animTime >= 21000) {
+                    const doneAlpha = easeOutCubic(progress(21000, 22000));
+                    ctx.save();
+                    ctx.globalAlpha = execAlpha * doneAlpha;
+                    ctx.font = '500 15px "Segoe UI", system-ui, sans-serif';
+                    ctx.fillStyle = GREEN;
+                    ctx.textAlign = 'left';
+                    ctx.fillText('✓ Execution complete', epX + 44, epY + epH - 30);
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }
+
+            // --- TRANSITION ARROW between phases ---
+            if (animTime >= 7000 && animTime <= 10000) {
+                const transAlpha = easeOutCubic(progress(7000, 8000)) * (1 - progress(9500, 10000));
+                const transProgress = easeOutCubic(progress(7000, 8500));
+
+                // Arrow between the two panels
+                const arrowFromX = cpX + cpW + 5;
+                const arrowToX = epX - 5;
+                const arrowY = panelY + 35;
+
+                ctx.save();
+                ctx.globalAlpha = transAlpha;
+
+                // Arrow line
+                const currentToX = lerp(arrowFromX, arrowToX, transProgress);
+                drawArrow(arrowFromX, arrowY, currentToX, arrowY, TEXT_MED, 1, 2.5);
+
+                // Label
+                if (transProgress > 0.5) {
+                    const labelAlpha = easeOutCubic((transProgress - 0.5) * 2);
+                    ctx.globalAlpha = transAlpha * labelAlpha;
+                    ctx.font = '500 13px "Segoe UI", system-ui, sans-serif';
+                    ctx.fillStyle = TEXT_MED;
+                    ctx.textAlign = 'center';
+                    ctx.fillText('then', (arrowFromX + arrowToX) / 2, arrowY - 12);
+                }
+
+                ctx.restore();
+            }
+
+            // --- BOTTOM: Timeline indicator ---
+            const timelineY = 550;
+            const timelineX = 80;
+            const timelineW = 1760;
+
+            const tlAlpha = easeOutCubic(progress(500, 1200));
+            if (tlAlpha > 0) {
+                ctx.save();
+                ctx.globalAlpha = tlAlpha * 0.7;
+
+                // Timeline line
+                ctx.strokeStyle = GRAY_BORDER;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(timelineX, timelineY);
+                ctx.lineTo(timelineX + timelineW, timelineY);
+                ctx.stroke();
+
+                // Progress fill
+                const overallProgress = animTime / TOTAL_DURATION;
+                const creationEnd = 7000 / TOTAL_DURATION;
+                const executionStart = 9000 / TOTAL_DURATION;
+
+                // Creation segment
+                if (overallProgress > 0) {
+                    const fillEnd = Math.min(overallProgress, 1);
+                    const gradient = ctx.createLinearGradient(timelineX, 0, timelineX + timelineW, 0);
+                    gradient.addColorStop(0, BLUE);
+                    gradient.addColorStop(creationEnd, BLUE);
+                    gradient.addColorStop(executionStart, ORANGE);
+                    gradient.addColorStop(1, ORANGE);
+
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(timelineX, timelineY);
+                    ctx.lineTo(timelineX + timelineW * fillEnd, timelineY);
+                    ctx.stroke();
+
+                    // Current position dot
+                    ctx.fillStyle = overallProgress < executionStart ? BLUE : ORANGE;
+                    ctx.beginPath();
+                    ctx.arc(timelineX + timelineW * fillEnd, timelineY, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Labels
+                ctx.font = '600 13px "Segoe UI", system-ui, sans-serif';
+                ctx.textAlign = 'center';
+
+                ctx.fillStyle = BLUE;
+                ctx.fillText('Creation Phase', timelineX + timelineW * (creationEnd / 2), timelineY + 24);
+
+                ctx.fillStyle = ORANGE;
+                ctx.fillText('Execution Phase', timelineX + timelineW * ((executionStart + 1) / 2), timelineY + 24);
+
+                // Divider
+                ctx.strokeStyle = GRAY_BORDER;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                const divX = timelineX + timelineW * ((creationEnd + executionStart) / 2);
+                ctx.moveTo(divX, timelineY - 12);
+                ctx.lineTo(divX, timelineY + 12);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.restore();
+            }
+
+            // --- KEY TAKEAWAY ---
+            if (animTime >= 21500) {
+                const takeawayAlpha = easeOutCubic(progress(21500, 22500));
+                ctx.save();
+                ctx.globalAlpha = takeawayAlpha;
+
+                const tkY = 610;
+                const tkX = 560;
+                const tkW = 800;
+                const tkH = 80;
+
+                // Background
+                ctx.fillStyle = '#F0FDF4';
+                ctx.strokeStyle = GREEN + '60';
+                ctx.lineWidth = 2;
+                roundRect(tkX, tkY, tkW, tkH, 12);
+                ctx.fill();
+                ctx.stroke();
+
+                // Icon
+                ctx.font = '24px "Segoe UI"';
+                ctx.textAlign = 'left';
+                ctx.fillText('💡', tkX + 20, tkY + 48);
+
+                // Text
+                ctx.font = '600 17px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = '#065F46';
+                ctx.fillText('Key Takeaway', tkX + 58, tkY + 32);
+
+                ctx.font = '400 15px "Segoe UI", system-ui, sans-serif';
+                ctx.fillStyle = '#047857';
+                ctx.fillText('var declarations are hoisted with value undefined — assignments happen at execution!', tkX + 58, tkY + 56);
+
+                ctx.restore();
+            }
+
+            // Update progress bar
+            document.getElementById('progressFill').style.width = (animTime / TOTAL_DURATION * 100) + '%';
+        }
+
+        function animate(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            if (isPlaying) {
+                animTime += delta;
+                if (animTime >= TOTAL_DURATION) {
+                    animTime = TOTAL_DURATION;
+                    isPlaying = false;
+                    document.getElementById('playBtn').textContent = '▶ Play Again';
+                }
+            }
+
+            draw();
+            animationId = requestAnimationFrame(animate);
+        }
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (animTime >= TOTAL_DURATION) {
+                animTime = 0;
+            }
+            isPlaying = !isPlaying;
+            document.getElementById('playBtn').textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+            lastTimestamp = 0;
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            animTime = 0;
+            isPlaying = false;
+            lastTimestamp = 0;
+            document.getElementById('playBtn').textContent = '▶ Play Animation';
+            draw();
+        });
+
+        // Initial draw
+        draw();
+        animationId = requestAnimationFrame(animate);
+    </script>
+</body>
+
+</html>
