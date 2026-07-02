@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracing Execution: Hoisting + Scope + Scope Chain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            color: #fff;
+            margin-bottom: 4px;
+            text-align: center
+        }
+
+        .sub {
+            font-size: .85rem;
+            color: #555;
+            margin-bottom: 20px;
+            text-align: center
+        }
+
+        .ctrls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center
+        }
+
+        .btn {
+            padding: 8px 20px;
+            border: 1px solid #333;
+            background: #1a1a2e;
+            color: #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: .84rem;
+            transition: .2s;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .btn:hover {
+            background: #252540;
+            border-color: #555
+        }
+
+        .btn.pri {
+            background: #6c63ff;
+            border-color: #6c63ff;
+            color: #fff
+        }
+
+        .btn.pri:hover {
+            background: #5a52d5
+        }
+
+        .btn:disabled {
+            opacity: .3;
+            cursor: not-allowed
+        }
+
+        .spd {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: .72rem;
+            color: #555
+        }
+
+        .spd select {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #ccc;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: .76rem
+        }
+
+        .dots {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap
+        }
+
+        .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #1a1a2e;
+            border: 1px solid #2a2a3a;
+            transition: .3s
+        }
+
+        .dot.done {
+            background: #6c63ff;
+            border-color: #6c63ff
+        }
+
+        .dot.cur {
+            background: #6c63ff;
+            border-color: #fff;
+            box-shadow: 0 0 8px rgba(108, 99, 255, .6);
+            transform: scale(1.4)
+        }
+
+        .grid {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 16px
+        }
+
+        @media(max-width:860px) {
+            .grid {
+                grid-template-columns: 1fr
+            }
+        }
+
+        .full {
+            grid-column: 1/-1
+        }
+
+        .panel {
+            background: #111122;
+            border: 1px solid #252540;
+            border-radius: 10px;
+            padding: 16px 18px;
+            overflow: hidden
+        }
+
+        .ptitle {
+            font-size: .68rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #555;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 7px
+        }
+
+        .ptitle .pd {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block
+        }
+
+        .code-scroll {
+            max-height: 460px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #252540 transparent
+        }
+
+        .cl {
+            font-family: 'Fira Code', Consolas, monospace;
+            font-size: .78rem;
+            padding: 3px 10px;
+            margin: 1px 0;
+            border-radius: 4px;
+            border-left: 3px solid transparent;
+            transition: .35s;
+            white-space: pre;
+            line-height: 1.55;
+            position: relative
+        }
+
+        .cl .ln {
+            color: #333;
+            display: inline-block;
+            width: 20px;
+            text-align: right;
+            margin-right: 10px;
+            font-size: .68rem;
+            user-select: none
+        }
+
+        .cl.hi {
+            background: rgba(108, 99, 255, .12);
+            border-left-color: #6c63ff
+        }
+
+        .cl.exec-hi {
+            background: rgba(0, 201, 167, .1);
+            border-left-color: #00c9a7
+        }
+
+        .cl.dim {
+            opacity: .35
+        }
+
+        .cl.warn-hi {
+            background: rgba(255, 203, 107, .1);
+            border-left-color: #ffcb6b
+        }
+
+        .kw {
+            color: #c792ea
+        }
+
+        .fn {
+            color: #82aaff
+        }
+
+        .str {
+            color: #c3e88d
+        }
+
+        .prm {
+            color: #ffcb6b
+        }
+
+        .op {
+            color: #89ddff
+        }
+
+        .num {
+            color: #f78c6c
+        }
+
+        .scope-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .scope-box {
+            border-radius: 8px;
+            padding: 12px 14px;
+            border: 1px solid #252540;
+            transition: .5s;
+            opacity: 0;
+            transform: translateY(10px);
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 14px;
+            margin: 0
+        }
+
+        .scope-box.vis {
+            opacity: 1;
+            transform: translateY(0);
+            max-height: 500px;
+            padding: 12px 14px;
+            margin-top: 0
+        }
+
+        .scope-box.glow {
+            box-shadow: 0 0 16px rgba(108, 99, 255, .2)
+        }
+
+        .scope-box.global-s {
+            background: rgba(108, 99, 255, .06);
+            border-color: rgba(108, 99, 255, .25)
+        }
+
+        .scope-box.first-s {
+            background: rgba(0, 201, 167, .06);
+            border-color: rgba(0, 201, 167, .25)
+        }
+
+        .scope-box.second-s {
+            background: rgba(255, 203, 107, .06);
+            border-color: rgba(255, 203, 107, .25)
+        }
+
+        .scope-label {
+            font-size: .7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .scope-label.gl {
+            color: #6c63ff
+        }
+
+        .scope-label.fl {
+            color: #00c9a7
+        }
+
+        .scope-label.sl {
+            color: #ffcb6b
+        }
+
+        .sv {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 10px;
+            margin: 2px 0;
+            border-radius: 5px;
+            font-family: 'Fira Code', monospace;
+            font-size: .76rem;
+            background: #0d0d18;
+            border: 1px solid #1a1a2e;
+            transition: .4s
+        }
+
+        .sv.changed {
+            border-color: #ffcb6b;
+            background: rgba(255, 203, 107, .06)
+        }
+
+        .sv.tdz-v {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, .06)
+        }
+
+        .sv .vn {
+            color: #888
+        }
+
+        .sv .vv {
+            color: #ccc
+        }
+
+        .sv.tdz-v .vv {
+            color: #ff4757
+        }
+
+        .sv.changed .vv {
+            color: #ffcb6b
+        }
+
+        .sv.fn-v .vv {
+            color: #00c9a7
+        }
+
+        .chain-arrow {
+            text-align: center;
+            color: #333;
+            font-size: .7rem;
+            padding: 2px 0;
+            transition: .4s;
+            display: none
+        }
+
+        .chain-arrow.show {
+            display: block
+        }
+
+        .chain-arrow.lit {
+            color: #6c63ff
+        }
+
+        .narr {
+            background: #111122;
+            border: 1px solid #252540;
+            border-radius: 10px;
+            padding: 14px 18px;
+            min-height: 60px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px
+        }
+
+        .narr-i {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            margin-top: 2px
+        }
+
+        .narr-t {
+            font-size: .88rem;
+            line-height: 1.65;
+            color: #bbb
+        }
+
+        .narr-t strong {
+            color: #fff
+        }
+
+        .narr-t code {
+            background: #1a1a2e;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: 'Fira Code', monospace;
+            font-size: .8rem
+        }
+
+        .hl-g {
+            color: #6c63ff;
+            font-weight: 600
+        }
+
+        .hl-f {
+            color: #00c9a7;
+            font-weight: 600
+        }
+
+        .hl-s {
+            color: #ffcb6b;
+            font-weight: 600
+        }
+
+        .hl-e {
+            color: #ff4757;
+            font-weight: 600
+        }
+
+        .hl-w {
+            color: #ffcb6b;
+            font-weight: 600
+        }
+
+        .console-box {
+            background: #08080f;
+            border: 1px solid #1a1a2e;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-family: 'Fira Code', monospace;
+            font-size: .8rem;
+            min-height: 40px
+        }
+
+        .con-label {
+            font-size: .62rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #2a2a3a;
+            margin-bottom: 6px;
+            font-family: 'Segoe UI', sans-serif
+        }
+
+        .con-line {
+            padding: 2px 0;
+            animation: fadeU .3s;
+            color: #ccc
+        }
+
+        @keyframes fadeU {
+            from {
+                opacity: 0;
+                transform: translateY(5px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 16px;
+            font-size: .68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px
+        }
+
+        .pb-mem {
+            background: rgba(108, 99, 255, .12);
+            color: #6c63ff;
+            border: 1px solid rgba(108, 99, 255, .3)
+        }
+
+        .pb-exec {
+            background: rgba(0, 201, 167, .12);
+            color: #00c9a7;
+            border: 1px solid rgba(0, 201, 167, .3)
+        }
+
+        .pb-done {
+            background: rgba(0, 201, 167, .12);
+            color: #00c9a7;
+            border: 1px solid rgba(0, 201, 167, .3)
+        }
+
+        .insight {
+            background: linear-gradient(135deg, rgba(108, 99, 255, .08), rgba(0, 201, 167, .04));
+            border: 1px solid rgba(108, 99, 255, .2);
+            border-radius: 10px;
+            padding: 18px 20px;
+            opacity: 0;
+            transition: .5s;
+            max-height: 0;
+            overflow: hidden
+        }
+
+        .insight.vis {
+            opacity: 1;
+            max-height: 600px;
+            padding: 18px 20px;
+            margin-top: 0
+        }
+
+        .insight h3 {
+            font-size: .75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6c63ff;
+            margin-bottom: 8px
+        }
+
+        .insight p {
+            font-size: .86rem;
+            line-height: 1.65;
+            color: #aaa;
+            margin-bottom: 4px
+        }
+
+        .insight code {
+            background: #1a1a2e;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: 'Fira Code', monospace;
+            font-size: .78rem
+        }
+
+        .step-counter {
+            font-size: .75rem;
+            color: #444;
+            margin-left: 4px;
+            font-variant-numeric: tabular-nums
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🔬 Tracing Execution Step by Step</h1>
+    <p class="sub">Creation Phase → Execution Phase → Hoisting → Scope → Scope Chain — All Together</p>
+
+    <div class="ctrls">
+        <button class="btn pri" id="playBtn" onclick="play()">▶ Play</button>
+        <button class="btn" id="backBtn" onclick="back()" disabled>← Back</button>
+        <button class="btn" id="stepBtn" onclick="step()">Next →</button>
+        <button class="btn" onclick="rewind()">↺ Reset</button>
+        <div class="spd"><label>Speed:</label><select id="spd" onchange="sp=+this.value">
+                <option value="2400">Slow</option>
+                <option value="1600" selected>Normal</option>
+                <option value="900">Fast</option>
+            </select></div>
+        <span class="step-counter" id="stepCounter"></span>
+    </div>
+    <div class="dots" id="dots"></div>
+
+    <div class="grid">
+        <div class="panel">
+            <div class="ptitle"><span class="pd" style="background:#6c63ff"></span>Code</div>
+            <div class="code-scroll" id="codeArea"></div>
+        </div>
+
+        <div class="panel" id="scopePanel">
+            <div class="ptitle"><span class="pd" style="background:#00c9a7"></span>Scope / Memory</div>
+            <div id="phaseBadge"></div>
+            <div class="scope-stack" id="scopeStack">
+                <div class="scope-box global-s" id="sGlobal">
+                    <div class="scope-label gl">🌐 Global Scope</div>
+                    <div id="gVars"></div>
+                </div>
+                <div class="chain-arrow" id="chain1">↑ scope chain ↑</div>
+                <div class="scope-box first-s" id="sFirst">
+                    <div class="scope-label fl">📦 first() Scope</div>
+                    <div id="fVars"></div>
+                </div>
+                <div class="chain-arrow" id="chain2">↑ scope chain ↑</div>
+                <div class="scope-box second-s" id="sSecond">
+                    <div class="scope-label sl">📦 second() Scope</div>
+                    <div id="sVars"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="narr full" id="narrBox">
+            <span class="narr-i" id="narrI">📖</span>
+            <div class="narr-t" id="narrT">Press <strong>Play</strong> to auto-advance, or use <strong>Next →</strong>
+                and <strong>← Back</strong> to go at your own pace.</div>
+        </div>
+
+        <div class="full">
+            <div class="console-box">
+                <div class="con-label">▸ Console Output</div>
+                <div id="conOut"><span style="color:#1a1a2e">_</span></div>
+            </div>
+        </div>
+
+        <div class="insight full" id="insight"></div>
+    </div>
+
+    <script>
+        const code = [
+            { n: 1, t: `<span class="kw">var</span> a <span class="op">=</span> <span class="num">1</span>;` },
+            { n: 2, t: `<span class="kw">let</span> b <span class="op">=</span> <span class="num">2</span>;` },
+            { n: 3, t: `` },
+            { n: 4, t: `<span class="kw">function</span> <span class="fn">first</span>() {` },
+            { n: 5, t: `  <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">"A:"</span>, a);` },
+            { n: 6, t: `  <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">"B:"</span>, b);` },
+            { n: 7, t: `  <span class="kw">var</span> a <span class="op">=</span> <span class="num">10</span>;` },
+            { n: 8, t: `  <span class="kw">let</span> c <span class="op">=</span> <span class="num">30</span>;` },
+            { n: 9, t: `` },
+            { n: 10, t: `  <span class="kw">function</span> <span class="fn">second</span>() {` },
+            { n: 11, t: `    <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">"C:"</span>, c);` },
+            { n: 12, t: `    <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">"B inside second:"</span>, b);` },
+            { n: 13, t: `  }` },
+            { n: 14, t: `` },
+            { n: 15, t: `  <span class="fn">second</span>();` },
+            { n: 16, t: `  <span class="fn">console</span>.<span class="fn">log</span>(<span class="str">"A after:"</span>, a);` },
+            { n: 17, t: `}` },
+            { n: 18, t: `` },
+            { n: 19, t: `<span class="fn">first</span>();` },
+            { n: 20, t: `<span class="fn">console</span>.<span class="fn">log</span>(<span class="str">"Global A:"</span>, a);` },
+        ];
+
+        function V(n, v, cls) { return `<div class="sv ${cls || ''}"><span class="vn">${n}</span><span class="vv">${v}</span></div>` }
+
+        const S = [
+            // 0 — Global Creation
+            {
+                hi: [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], exec: [], dim: [],
+                phase: 'mem', phaseCtx: 'Global',
+                gShow: true, gVars: () => V('a', 'undefined') + V('b', '⛔ uninitialized', 'tdz-v') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '🧠', narr: `<strong>Global Creation Phase</strong> — JS scans all global code <em>before</em> running anything.<br><br>• <code>var a</code> → registered as <span class="hl-g">undefined</span><br>• <code>let b</code> → registered but <span class="hl-e">uninitialized (TDZ)</span><br>• <code>function first</code> → <span class="hl-f">entire function hoisted</span>`,
+                out: []
+            },
+
+            // 1 — var a = 1
+            {
+                hi: [0], exec: [], dim: [],
+                phase: 'exec', phaseCtx: 'Global',
+                gShow: true, gVars: () => V('a', '1', 'changed') + V('b', '⛔ uninitialized', 'tdz-v') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '▶️', narr: `<strong>Execution begins.</strong> <span class="hl-g">Line 1</span>: <code>var a = 1</code> — The variable <code>a</code> already exists (creation phase). Now assigned: <code>undefined</code> → <span class="hl-w">1</span>.`,
+                out: []
+            },
+
+            // 2 — let b = 2
+            {
+                hi: [1], exec: [], dim: [0],
+                phase: 'exec', phaseCtx: 'Global',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2', 'changed') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '▶️', narr: `<span class="hl-g">Line 2</span>: <code>let b = 2</code> — <code>b</code> leaves the <span class="hl-e">TDZ</span> and is initialized to <span class="hl-w">2</span>.`,
+                out: []
+            },
+
+            // 3 — first() called
+            {
+                hi: [18], exec: [], dim: [0, 1],
+                phase: 'exec', phaseCtx: 'Global',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v changed'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '📞', narr: `<span class="hl-g">Line 19</span>: <code>first()</code> is called. JS creates a <strong>new execution context</strong>. Before running the body, it enters the <strong>creation phase</strong> for <code>first</code>'s scope.`,
+                out: []
+            },
+
+            // 4 — first() creation phase
+            {
+                hi: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], exec: [], dim: [0, 1, 18],
+                phase: 'mem', phaseCtx: 'first()',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', 'undefined') + V('c', '⛔ uninitialized', 'tdz-v') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c2: false,
+                icon: '🧠', narr: `<strong>first() Creation Phase</strong> — JS scans the body:<br><br>• <code>var a</code> → <span class="hl-g">undefined</span> <em>(separate from global <code>a</code>!)</em><br>• <code>let c</code> → <span class="hl-e">TDZ</span><br>• <code>function second</code> → <span class="hl-f">fully hoisted</span><br><br>⚠️ first's own <code>a</code> now <strong>shadows</strong> global <code>a</code>.`,
+                out: []
+            },
+
+            // 5 — console.log("A:", a) — TRICKY
+            {
+                hi: [4], exec: [], dim: [0, 1, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', 'undefined', 'changed') + V('c', '⛔ uninitialized', 'tdz-v') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c2: false,
+                icon: '⚠️', narr: `<span class="hl-f">Line 5</span>: <code>console.log("A:", a)</code> — Looks for <code>a</code> in <strong>first's scope</strong>. <span class="hl-w">Found!</span> But it's <code>undefined</code> — the <code>var a = 10</code> on line 7 was <strong>hoisted</strong>, but <code>10</code> hasn't been assigned yet.<br><br>🔑 <strong>This is the tricky one!</strong> Many expect <code>1</code> (global), but first's own <code>var a</code> <strong>shadows</strong> global <code>a</code>.`,
+                out: ['A: undefined']
+            },
+
+            // 6 — console.log("B:", b) — scope chain
+            {
+                hi: [5], exec: [], dim: [0, 1, 4, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gGlow: true, gVars: () => V('a', '1') + V('b', '2', 'changed') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: false, fVars: () => V('a', 'undefined') + V('c', '⛔ uninitialized', 'tdz-v') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c1lit: true, c2: false,
+                icon: '🔗', narr: `<span class="hl-f">Line 6</span>: <code>console.log("B:", b)</code> — Not in first's scope. Goes up <span class="hl-g">scope chain</span> to global. Found! <code>b = 2</code>.`,
+                out: ['A: undefined', 'B: 2']
+            },
+
+            // 7 — var a = 10
+            {
+                hi: [6], exec: [], dim: [0, 1, 4, 5, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gGlow: false, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', '10', 'changed') + V('c', '⛔ uninitialized', 'tdz-v') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c2: false,
+                icon: '▶️', narr: `<span class="hl-f">Line 7</span>: <code>var a = 10</code> — Assignment runs: first's <code>a</code> goes <code>undefined</code> → <span class="hl-w">10</span>.<br>Global <code>a</code> is still <code>1</code>. <strong>Completely separate</strong> variables.`,
+                out: ['A: undefined', 'B: 2']
+            },
+
+            // 8 — let c = 30
+            {
+                hi: [7], exec: [], dim: [0, 1, 4, 5, 6, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', '10') + V('c', '30', 'changed') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c2: false,
+                icon: '▶️', narr: `<span class="hl-f">Line 8</span>: <code>let c = 30</code> — <code>c</code> leaves the <span class="hl-e">TDZ</span> → <span class="hl-w">30</span>.`,
+                out: ['A: undefined', 'B: 2']
+            },
+
+            // 9 — second() called
+            {
+                hi: [14], exec: [], dim: [0, 1, 4, 5, 6, 7, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', '10') + V('c', '30') + V('second', 'ƒ second() { … }', 'fn-v changed'),
+                sShow: false, c1: true, c2: false,
+                icon: '📞', narr: `<span class="hl-f">Line 15</span>: <code>second()</code> is called. New execution context. JS scans second's body — <strong>no declarations</strong>. Empty local scope.`,
+                out: ['A: undefined', 'B: 2']
+            },
+
+            // 10 — console.log("C:", c) — chain up to first
+            {
+                hi: [10], exec: [], dim: [0, 1, 4, 5, 6, 7, 14, 18],
+                phase: 'exec', phaseCtx: 'second()',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: false, fVars: () => V('a', '10') + V('c', '30', 'changed') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: true, sGlow: true, sVars: () => `<div style="color:#444;font-size:.76rem;padding:4px 0;text-align:center">— empty scope —</div>`,
+                c1: true, c2: true, c2lit: true,
+                icon: '🔗', narr: `<span class="hl-s">Line 11</span>: <code>console.log("C:", c)</code> — Not in second's scope. <span class="hl-s">Scope chain ↑</span> to first. Found! <code>c = 30</code>.`,
+                out: ['A: undefined', 'B: 2', 'C: 30']
+            },
+
+            // 11 — console.log("B inside second:", b) — chain to global
+            {
+                hi: [11], exec: [], dim: [0, 1, 4, 5, 6, 7, 10, 14, 18],
+                phase: 'exec', phaseCtx: 'second()',
+                gShow: true, gGlow: true, gVars: () => V('a', '1') + V('b', '2', 'changed') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: false, fVars: () => V('a', '10') + V('c', '30') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: true, sGlow: true, sVars: () => `<div style="color:#444;font-size:.76rem;padding:4px 0;text-align:center">— empty scope —</div>`,
+                c1: true, c1lit: true, c2: true, c2lit: true,
+                icon: '🔗', narr: `<span class="hl-s">Line 12</span>: <code>console.log("B inside second:", b)</code> — Not in second. Not in first. <span class="hl-g">Scope chain ↑↑</span> to global. Found! <code>b = 2</code>.<br><br>Chain: <span class="hl-s">second</span> → <span class="hl-f">first</span> → <span class="hl-g">global</span>. Two hops!`,
+                out: ['A: undefined', 'B: 2', 'C: 30', 'B inside second: 2']
+            },
+
+            // 12 — second returns
+            {
+                hi: [12], exec: [], dim: [0, 1, 4, 5, 6, 7, 10, 11, 14, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gGlow: false, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', '10') + V('c', '30') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c2: false,
+                icon: '↩️', narr: `<code>second()</code> returns. Its context is <strong>popped off</strong>. Back in <code>first()</code>.`,
+                out: ['A: undefined', 'B: 2', 'C: 30', 'B inside second: 2']
+            },
+
+            // 13 — console.log("A after:", a)
+            {
+                hi: [15], exec: [], dim: [0, 1, 4, 5, 6, 7, 10, 11, 12, 14, 18],
+                phase: 'exec', phaseCtx: 'first()',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: true, fGlow: true, fVars: () => V('a', '10', 'changed') + V('c', '30') + V('second', 'ƒ second() { … }', 'fn-v'),
+                sShow: false, c1: true, c2: false,
+                icon: '▶️', narr: `<span class="hl-f">Line 16</span>: <code>console.log("A after:", a)</code> — Found in first's scope: <code>a = 10</code>.`,
+                out: ['A: undefined', 'B: 2', 'C: 30', 'B inside second: 2', 'A after: 10']
+            },
+
+            // 14 — first returns
+            {
+                hi: [16], exec: [], dim: [0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18],
+                phase: 'exec', phaseCtx: 'Global',
+                gShow: true, gGlow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '↩️', narr: `<code>first()</code> returns. Its context is gone. Back in <strong>global scope</strong>.`,
+                out: ['A: undefined', 'B: 2', 'C: 30', 'B inside second: 2', 'A after: 10']
+            },
+
+            // 15 — console.log("Global A:", a)
+            {
+                hi: [19], exec: [], dim: [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18],
+                phase: 'exec', phaseCtx: 'Global',
+                gShow: true, gGlow: true, gVars: () => V('a', '1', 'changed') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '🎯', narr: `<span class="hl-g">Line 20</span>: <code>console.log("Global A:", a)</code> — Global <code>a = 1</code>. It was <strong>never changed</strong>. <code>first()</code> had its <em>own</em> <code>a</code> that shadowed it.`,
+                out: ['A: undefined', 'B: 2', 'C: 30', 'B inside second: 2', 'A after: 10', 'Global A: 1']
+            },
+
+            // 16 — done
+            {
+                hi: [], exec: [], dim: [],
+                phase: 'done', phaseCtx: '',
+                gShow: true, gVars: () => V('a', '1') + V('b', '2') + V('first', 'ƒ first() { … }', 'fn-v'),
+                fShow: false, sShow: false, c1: false, c2: false,
+                icon: '🏆', narr: `<strong>Execution complete!</strong> All 6 outputs match. The trickiest was <code>A: undefined</code> — where <strong>hoisting</strong> and <strong>shadowing</strong> combined.`,
+                out: ['A: undefined', 'B: 2', 'C: 30', 'B inside second: 2', 'A after: 10', 'Global A: 1'],
+                showInsight: true
+            },
+        ];
+
+        let cur = -1, sp = 1600, playing = false, tmr = null;
+
+        function renderCode() {
+            document.getElementById('codeArea').innerHTML = code.map((l, i) =>
+                `<div class="cl" id="cl${i}"><span class="ln">${l.n}</span>${l.t || '&nbsp;'}</div>`
+            ).join('');
+        }
+
+        function renderDots() {
+            document.getElementById('dots').innerHTML = S.map((_, i) => {
+                let c = 'dot';
+                if (i < cur) c += ' done';
+                if (i === cur) c += ' cur';
+                return `<div class="${c}"></div>`;
+            }).join('');
+        }
+
+        function updateButtons() {
+            document.getElementById('backBtn').disabled = cur <= 0;
+            document.getElementById('stepBtn').disabled = cur >= S.length - 1;
+            document.getElementById('playBtn').disabled = cur >= S.length - 1;
+            document.getElementById('stepCounter').textContent = cur >= 0 ? `${cur + 1} / ${S.length}` : '';
+        }
+
+        function render(idx) {
+            const s = S[idx];
+
+            code.forEach((_, i) => {
+                const el = document.getElementById(`cl${i}`);
+                el.className = 'cl';
+                if (s.hi && s.hi.includes(i)) el.classList.add('hi');
+                if (s.exec && s.exec.includes(i)) el.classList.add('exec-hi');
+                if (s.dim && s.dim.includes(i)) el.classList.add('dim');
+            });
+
+            const first = s.hi?.[0] ?? s.exec?.[0];
+            if (first !== undefined) document.getElementById(`cl${first}`).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+            // phase badge
+            const pb = document.getElementById('phaseBadge');
+            if (s.phase === 'mem') pb.innerHTML = `<span class="phase-badge pb-mem">🧠 Creation Phase — ${s.phaseCtx}</span>`;
+            else if (s.phase === 'exec') pb.innerHTML = `<span class="phase-badge pb-exec">⚡ Execution Phase — ${s.phaseCtx}</span>`;
+            else pb.innerHTML = `<span class="phase-badge pb-done">✅ Complete</span>`;
+
+            // scopes
+            const gEl = document.getElementById('sGlobal');
+            gEl.classList.toggle('vis', !!s.gShow);
+            gEl.classList.toggle('glow', !!s.gGlow);
+            if (s.gVars) document.getElementById('gVars').innerHTML = s.gVars();
+
+            const fEl = document.getElementById('sFirst');
+            fEl.classList.toggle('vis', !!s.fShow);
+            fEl.classList.toggle('glow', !!s.fGlow);
+            if (s.fVars) document.getElementById('fVars').innerHTML = s.fVars();
+            else if (!s.fShow) document.getElementById('fVars').innerHTML = '';
+
+            const sEl = document.getElementById('sSecond');
+            sEl.classList.toggle('vis', !!s.sShow);
+            sEl.classList.toggle('glow', !!s.sGlow);
+            if (s.sVars) document.getElementById('sVars').innerHTML = s.sVars();
+            else if (!s.sShow) document.getElementById('sVars').innerHTML = '';
+
+            const c1 = document.getElementById('chain1');
+            c1.classList.toggle('show', !!s.c1);
+            c1.classList.toggle('lit', !!s.c1lit);
+
+            const c2 = document.getElementById('chain2');
+            c2.classList.toggle('show', !!s.c2);
+            c2.classList.toggle('lit', !!s.c2lit);
+
+            document.getElementById('narrI').textContent = s.icon;
+            document.getElementById('narrT').innerHTML = s.narr;
+
+            const outEl = document.getElementById('conOut');
+            if (!s.out.length) outEl.innerHTML = '<span style="color:#1a1a2e">_</span>';
+            else outEl.innerHTML = s.out.map(t => `<div class="con-line">→ ${t}</div>`).join('');
+
+            const ins = document.getElementById('insight');
+            if (s.showInsight) {
+                ins.innerHTML = `<h3>💡 The Key Insight</h3>
+<p>The most important line was <code>console.log("A:", a)</code> inside <code>first()</code>. Even though global <code>a</code> is <code>1</code>, the function's own <code>var a</code> (hoisted to <code>undefined</code> during creation) <strong>shadows</strong> the global <code>a</code>.</p>
+<p>This is why understanding both <strong>hoisting</strong> AND <strong>scope</strong> together matters — they interact. The creation phase set <code>a = undefined</code> in first's scope, and scope rules meant JS found <em>that</em> <code>a</code> first, never reaching global.</p>
+<p style="margin-top:8px;color:#6c63ff;font-weight:600">Hoisting decides WHAT exists. Scope decides WHERE to look. The scope chain decides the ORDER of lookup.</p>`;
+                ins.classList.add('vis');
+            } else {
+                ins.classList.remove('vis');
+            }
+
+            renderDots();
+            updateButtons();
+        }
+
+        function step() {
+            if (cur >= S.length - 1) return;
+            cur++;
+            render(cur);
+        }
+
+        function back() {
+            if (cur <= 0) return;
+            // If auto-playing, stop
+            if (playing) { clearTimeout(tmr); playing = false; }
+            cur--;
+            render(cur);
+        }
+
+        function play() {
+            if (playing || cur >= S.length - 1) return;
+            playing = true;
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('stepBtn').disabled = true;
+            // Keep back enabled during play
+            function tick() {
+                if (cur >= S.length - 1) { playing = false; updateButtons(); return; }
+                cur++;
+                render(cur);
+                tmr = setTimeout(tick, sp);
+            }
+            tick();
+        }
+
+        function rewind() {
+            clearTimeout(tmr); playing = false; cur = -1;
+            renderCode();
+            document.getElementById('phaseBadge').innerHTML = '';
+            document.getElementById('gVars').innerHTML = '';
+            document.getElementById('fVars').innerHTML = '';
+            document.getElementById('sVars').innerHTML = '';
+            document.getElementById('sGlobal').className = 'scope-box global-s';
+            document.getElementById('sFirst').className = 'scope-box first-s';
+            document.getElementById('sSecond').className = 'scope-box second-s';
+            document.getElementById('chain1').className = 'chain-arrow';
+            document.getElementById('chain2').className = 'chain-arrow';
+            document.getElementById('narrI').textContent = '📖';
+            document.getElementById('narrT').innerHTML = 'Press <strong>Play</strong> to auto-advance, or use <strong>Next →</strong> and <strong>← Back</strong> to go at your own pace.';
+            document.getElementById('conOut').innerHTML = '<span style="color:#1a1a2e">_</span>';
+            document.getElementById('insight').classList.remove('vis');
+            document.getElementById('insight').innerHTML = '';
+            renderDots();
+            updateButtons();
+        }
+
+        renderCode(); renderDots(); updateButtons();
+    </script>
+</body>
+
+</html>
