@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Function Hoisting: Declaration vs Expression</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: #888;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            padding: 10px 24px;
+            border: 1px solid #333;
+            background: #111;
+            color: #888;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #1a1a2e;
+            color: #fff;
+            border-color: #444;
+            border-bottom-color: #1a1a2e;
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: #1a1a2e;
+            color: #aaa;
+        }
+
+        .demo-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .animation-area {
+            width: 100%;
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: #12121f;
+            border: 1px solid #2a2a3a;
+            border-radius: 12px;
+            padding: 24px;
+            min-width: 280px;
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .panel-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #666;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .code-panel .panel-title .dot {
+            background: #6c63ff;
+        }
+
+        .memory-panel .panel-title .dot {
+            background: #00c9a7;
+        }
+
+        .code-line {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            margin: 3px 0;
+            border-radius: 6px;
+            transition: all 0.4s;
+            position: relative;
+            border-left: 3px solid transparent;
+            line-height: 1.6;
+        }
+
+        .code-line.active {
+            background: rgba(108, 99, 255, 0.15);
+            border-left-color: #6c63ff;
+        }
+
+        .code-line.error-line {
+            background: rgba(255, 71, 87, 0.15);
+            border-left-color: #ff4757;
+        }
+
+        .code-line.success-line {
+            background: rgba(0, 201, 167, 0.15);
+            border-left-color: #00c9a7;
+        }
+
+        .code-line .line-num {
+            color: #444;
+            margin-right: 12px;
+            font-size: 0.75rem;
+            user-select: none;
+        }
+
+        .keyword {
+            color: #c792ea;
+        }
+
+        .func-name {
+            color: #82aaff;
+        }
+
+        .string {
+            color: #c3e88d;
+        }
+
+        .param {
+            color: #ffcb6b;
+        }
+
+        .comment {
+            color: #546e7a;
+        }
+
+        .operator {
+            color: #89ddff;
+        }
+
+        .memory-slot {
+            padding: 12px 16px;
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid #2a2a3a;
+            transition: all 0.5s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .memory-slot.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .memory-slot .var-name {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .memory-slot .var-value {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 4px;
+            background: #1a1a2e;
+        }
+
+        .memory-slot.tdz {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.08);
+        }
+
+        .memory-slot.tdz .var-value {
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.15);
+        }
+
+        .memory-slot.hoisted {
+            border-color: #00c9a7;
+            background: rgba(0, 201, 167, 0.08);
+        }
+
+        .memory-slot.hoisted .var-value {
+            color: #00c9a7;
+            background: rgba(0, 201, 167, 0.15);
+        }
+
+        .memory-slot.assigned {
+            border-color: #6c63ff;
+            background: rgba(108, 99, 255, 0.08);
+        }
+
+        .memory-slot.assigned .var-value {
+            color: #6c63ff;
+            background: rgba(108, 99, 255, 0.15);
+        }
+
+        .narration-box {
+            width: 100%;
+            max-width: 900px;
+            background: #12121f;
+            border: 1px solid #2a2a3a;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .narration-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .narration-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        .narration-text strong {
+            color: #fff;
+        }
+
+        .narration-text .highlight-tdz {
+            color: #ff4757;
+            font-weight: 600;
+        }
+
+        .narration-text .highlight-ok {
+            color: #00c9a7;
+            font-weight: 600;
+        }
+
+        .narration-text .highlight-fn {
+            color: #82aaff;
+            font-weight: 600;
+        }
+
+        .narration-text .highlight-purple {
+            color: #c792ea;
+            font-weight: 600;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .phase-memory {
+            background: rgba(0, 201, 167, 0.15);
+            color: #00c9a7;
+            border: 1px solid rgba(0, 201, 167, 0.3);
+        }
+
+        .phase-execution {
+            background: rgba(108, 99, 255, 0.15);
+            color: #6c63ff;
+            border: 1px solid rgba(108, 99, 255, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 10px 28px;
+            border: 1px solid #333;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: #252540;
+            border-color: #555;
+        }
+
+        .btn.primary {
+            background: #6c63ff;
+            border-color: #6c63ff;
+            color: #fff;
+        }
+
+        .btn.primary:hover {
+            background: #5a52d5;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .output-box {
+            width: 100%;
+            max-width: 900px;
+            background: #0d0d16;
+            border: 1px solid #2a2a3a;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-top: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            min-height: 44px;
+        }
+
+        .output-box .output-label {
+            color: #444;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .output-line {
+            padding: 2px 0;
+            animation: fadeIn 0.3s;
+        }
+
+        .output-error {
+            color: #ff4757;
+        }
+
+        .output-success {
+            color: #00c9a7;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
+            }
+        }
+
+        @keyframes pulseGreen {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 201, 167, 0);
+            }
+
+            50% {
+                box-shadow: 0 0 20px rgba(0, 201, 167, 0.3);
+            }
+        }
+
+        .memory-slot.pulse-red {
+            animation: pulse 1s ease-in-out;
+        }
+
+        .memory-slot.pulse-green {
+            animation: pulseGreen 1s ease-in-out;
+        }
+
+        .pointer-arrow {
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c63ff;
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .code-line.active .pointer-arrow {
+            opacity: 1;
+        }
+
+        .step-indicator {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2a2a3a;
+            transition: all 0.3s;
+        }
+
+        .step-dot.done {
+            background: #6c63ff;
+        }
+
+        .step-dot.current {
+            background: #6c63ff;
+            box-shadow: 0 0 10px rgba(108, 99, 255, 0.5);
+            transform: scale(1.3);
+        }
+
+        .key-insight {
+            width: 100%;
+            max-width: 900px;
+            background: linear-gradient(135deg, rgba(108, 99, 255, 0.1), rgba(0, 201, 167, 0.05));
+            border: 1px solid rgba(108, 99, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-top: 20px;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .key-insight.visible {
+            opacity: 1;
+        }
+
+        .key-insight h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6c63ff;
+            margin-bottom: 10px;
+        }
+
+        .key-insight p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: #bbb;
+        }
+
+        .comparison-table {
+            width: 100%;
+            max-width: 900px;
+            margin-top: 20px;
+            border-collapse: collapse;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .comparison-table.visible {
+            opacity: 1;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border: 1px solid #2a2a3a;
+            font-size: 0.85rem;
+        }
+
+        .comparison-table th {
+            background: #1a1a2e;
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+
+        .comparison-table td {
+            background: #12121f;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .speed-control select {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            color: #ccc;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Function Hoisting Explained</h1>
+    <p class="subtitle">Declaration vs Expression — What JavaScript does before running your code</p>
+
+    <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('expression')" id="tab-expr">❌ Function Expression</button>
+        <button class="tab-btn" onclick="switchTab('declaration')" id="tab-decl">✅ Function Declaration</button>
+    </div>
+
+    <div class="controls">
+        <button class="btn primary" id="playBtn" onclick="play()">▶ Play Animation</button>
+        <button class="btn" id="nextBtn" onclick="nextStep()" disabled>Next Step →</button>
+        <button class="btn" onclick="resetAnimation()">↺ Reset</button>
+        <div class="speed-control">
+            <label>Speed:</label>
+            <select id="speedSelect" onchange="updateSpeed()">
+                <option value="1500">Slow</option>
+                <option value="1000" selected>Normal</option>
+                <option value="600">Fast</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="step-indicator" id="stepIndicator"></div>
+
+    <div class="demo-container">
+        <div class="animation-area">
+            <div class="panel code-panel">
+                <div class="panel-title"><span class="dot"></span>YOUR CODE</div>
+                <div id="codeArea"></div>
+            </div>
+            <div class="panel memory-panel">
+                <div class="panel-title"><span class="dot"></span>JS ENGINE MEMORY</div>
+                <div id="phaseBadge"></div>
+                <div id="memoryArea"></div>
+            </div>
+        </div>
+
+        <div class="narration-box">
+            <div class="narration-icon" id="narrationIcon">📖</div>
+            <div class="narration-text" id="narrationText">
+                Click <strong>Play Animation</strong> to see how JavaScript processes this code step by step.
+            </div>
+        </div>
+
+        <div class="output-box">
+            <div class="output-label">Console Output</div>
+            <div id="consoleOutput"></div>
+        </div>
+
+        <div class="key-insight" id="keyInsight"></div>
+    </div>
+
+    <script>
+        let currentTab = 'expression';
+        let currentStep = 0;
+        let isPlaying = false;
+        let speed = 1000;
+        let animTimer = null;
+
+        const scenarios = {
+            expression: {
+                code: [
+                    { num: 1, html: `<span class="func-name">sayHello</span>(<span class="string">"Bob"</span>);` },
+                    { num: 2, html: `` },
+                    { num: 3, html: `<span class="keyword">const</span> <span class="func-name">sayHello</span> <span class="operator">=</span> <span class="keyword">function</span>(<span class="param">name</span>) {` },
+                    { num: 4, html: `&nbsp;&nbsp;<span class="func-name">console</span>.<span class="func-name">log</span>(<span class="string">"Hello, "</span> <span class="operator">+</span> <span class="param">name</span>);` },
+                    { num: 5, html: `};` }
+                ],
+                steps: [
+                    {
+                        phase: 'memory',
+                        icon: '🔍',
+                        narration: `<strong>Phase 1: Memory Creation</strong> — Before running any code, JavaScript scans the entire file to set up memory.`,
+                        activeLines: [],
+                        memory: [],
+                        output: []
+                    },
+                    {
+                        phase: 'memory',
+                        icon: '📝',
+                        narration: `JS sees <span class="highlight-fn">Line 1</span>: <code>sayHello("Bob")</code> — This is a function <em>call</em>, not a declaration. <strong>Skipped during memory phase.</strong>`,
+                        activeLines: [0],
+                        memory: [],
+                        output: []
+                    },
+                    {
+                        phase: 'memory',
+                        icon: '⚠️',
+                        narration: `JS sees <span class="highlight-fn">Line 3</span>: <code class="highlight-purple">const</code> <code>sayHello = ...</code> — It finds <span class="highlight-purple">const</span>, so it registers <code>sayHello</code> in memory but places it in the <span class="highlight-tdz">Temporal Dead Zone (TDZ)</span>. The function on the right side is <strong>completely ignored</strong> right now.`,
+                        activeLines: [2],
+                        memory: [{ name: 'sayHello', value: '🚫 TDZ', state: 'tdz', pulse: 'red' }],
+                        output: []
+                    },
+                    {
+                        phase: 'memory',
+                        icon: '💡',
+                        narration: `<strong>Key point:</strong> Because we used <span class="highlight-purple">const</span>, JavaScript treats this as a <strong>variable</strong> assignment, NOT a function declaration. The <code>= function(...)</code> part is just the value — and values are only assigned during execution.`,
+                        activeLines: [2, 3, 4],
+                        memory: [{ name: 'sayHello', value: '🚫 TDZ', state: 'tdz' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '▶️',
+                        narration: `<strong>Phase 2: Execution</strong> — Now JavaScript runs the code line by line, starting from Line 1.`,
+                        activeLines: [],
+                        memory: [{ name: 'sayHello', value: '🚫 TDZ', state: 'tdz' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '🔥',
+                        narration: `<span class="highlight-fn">Line 1</span>: JS tries to execute <code>sayHello("Bob")</code>. It looks up <code>sayHello</code> in memory and finds it's in the <span class="highlight-tdz">Temporal Dead Zone</span>!`,
+                        activeLines: [0],
+                        memory: [{ name: 'sayHello', value: '🚫 TDZ', state: 'tdz', pulse: 'red' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '💥',
+                        narration: `<span class="highlight-tdz">ReferenceError: Cannot access 'sayHello' before initialization</span><br><br>The variable exists in memory but hasn't been assigned its value yet. JavaScript <strong>refuses</strong> to let you access TDZ variables. Execution <strong>stops here.</strong>`,
+                        activeLines: [],
+                        errorLines: [0],
+                        memory: [{ name: 'sayHello', value: '🚫 TDZ', state: 'tdz' }],
+                        output: [{ text: "ReferenceError: Cannot access 'sayHello' before initialization", type: 'error' }]
+                    }
+                ],
+                insight: `<h3>💡 Key Insight</h3><p>A <strong>function expression</strong> (<code>const fn = function() {}</code>) is treated as a <strong>variable assignment</strong>. The <code>const</code> keyword triggers TDZ rules. The function value only gets assigned when execution reaches that line — so you <strong>cannot call it before it's defined</strong>.</p>`
+            },
+
+            declaration: {
+                code: [
+                    { num: 1, html: `<span class="func-name">sayHello</span>(<span class="string">"Bob"</span>);` },
+                    { num: 2, html: `` },
+                    { num: 3, html: `<span class="keyword">function</span> <span class="func-name">sayHello</span>(<span class="param">name</span>) {` },
+                    { num: 4, html: `&nbsp;&nbsp;<span class="func-name">console</span>.<span class="func-name">log</span>(<span class="string">"Hello, "</span> <span class="operator">+</span> <span class="param">name</span>);` },
+                    { num: 5, html: `}` }
+                ],
+                steps: [
+                    {
+                        phase: 'memory',
+                        icon: '🔍',
+                        narration: `<strong>Phase 1: Memory Creation</strong> — Before running any code, JavaScript scans the entire file to set up memory.`,
+                        activeLines: [],
+                        memory: [],
+                        output: []
+                    },
+                    {
+                        phase: 'memory',
+                        icon: '📝',
+                        narration: `JS sees <span class="highlight-fn">Line 1</span>: <code>sayHello("Bob")</code> — This is a function <em>call</em>, not a declaration. <strong>Skipped during memory phase.</strong>`,
+                        activeLines: [0],
+                        memory: [],
+                        output: []
+                    },
+                    {
+                        phase: 'memory',
+                        icon: '✨',
+                        narration: `JS sees <span class="highlight-fn">Line 3</span>: <code class="highlight-purple">function</code> <code>sayHello(name) {...}</code> — This is a <strong>function declaration</strong>! JavaScript hoists the <span class="highlight-ok">entire function</span> into memory — the name AND the body. It's fully available right now!`,
+                        activeLines: [2, 3, 4],
+                        memory: [{ name: 'sayHello', value: 'ƒ (name) { ... }', state: 'hoisted', pulse: 'green' }],
+                        output: []
+                    },
+                    {
+                        phase: 'memory',
+                        icon: '💡',
+                        narration: `<strong>Key difference:</strong> The keyword <span class="highlight-purple">function</span> at the start of the line tells JavaScript: "This is a declaration — hoist the <span class="highlight-ok">entire thing</span>." Not just the name. The whole function body is ready to use.`,
+                        activeLines: [2, 3, 4],
+                        memory: [{ name: 'sayHello', value: 'ƒ (name) { ... }', state: 'hoisted' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '▶️',
+                        narration: `<strong>Phase 2: Execution</strong> — Now JavaScript runs the code line by line, starting from Line 1.`,
+                        activeLines: [],
+                        memory: [{ name: 'sayHello', value: 'ƒ (name) { ... }', state: 'hoisted' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '📞',
+                        narration: `<span class="highlight-fn">Line 1</span>: JS executes <code>sayHello("Bob")</code>. It looks up <code>sayHello</code> in memory and finds the <span class="highlight-ok">complete function</span>! It can call it immediately.`,
+                        activeLines: [0],
+                        memory: [{ name: 'sayHello', value: 'ƒ (name) { ... }', state: 'hoisted', pulse: 'green' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '⚙️',
+                        narration: `JS jumps into the function body. <code>name</code> is <code>"Bob"</code>. It runs <code>console.log("Hello, " + "Bob")</code>...`,
+                        activeLines: [3],
+                        memory: [{ name: 'sayHello', value: 'ƒ (name) { ... }', state: 'hoisted' }],
+                        output: []
+                    },
+                    {
+                        phase: 'execution',
+                        icon: '🎉',
+                        narration: `<span class="highlight-ok">Success!</span> The output is printed. The function declaration was fully hoisted, so calling it before the declaration line <strong>works perfectly</strong>.`,
+                        activeLines: [],
+                        successLines: [0],
+                        memory: [{ name: 'sayHello', value: 'ƒ (name) { ... }', state: 'hoisted' }],
+                        output: [{ text: 'Hello, Bob', type: 'success' }]
+                    }
+                ],
+                insight: `<h3>💡 Key Insight</h3><p>A <strong>function declaration</strong> (<code>function fn() {}</code>) is hoisted <strong>completely</strong> — both the name and the body. JavaScript stores the entire function during the memory phase, making it available <strong>anywhere</strong> in that scope, even before the line where it's written.</p>`
+            }
+        };
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-expr').classList.toggle('active', tab === 'expression');
+            document.getElementById('tab-decl').classList.toggle('active', tab === 'declaration');
+            resetAnimation();
+        }
+
+        function renderCode() {
+            const codeArea = document.getElementById('codeArea');
+            const s = scenarios[currentTab];
+            codeArea.innerHTML = s.code.map((line, i) => `
+    <div class="code-line" id="codeLine${i}">
+      <span class="pointer-arrow">▶</span>
+      <span class="line-num">${line.num}</span>${line.html}
+    </div>
+  `).join('');
+        }
+
+        function renderStepIndicator() {
+            const el = document.getElementById('stepIndicator');
+            const total = scenarios[currentTab].steps.length;
+            el.innerHTML = Array.from({ length: total }, (_, i) => {
+                let cls = 'step-dot';
+                if (i < currentStep) cls += ' done';
+                if (i === currentStep) cls += ' current';
+                return `<div class="${cls}"></div>`;
+            }).join('');
+        }
+
+        function renderStep(stepIdx) {
+            const s = scenarios[currentTab];
+            if (stepIdx >= s.steps.length) {
+                showInsight();
+                isPlaying = false;
+                document.getElementById('playBtn').disabled = true;
+                document.getElementById('nextBtn').disabled = true;
+                return;
+            }
+
+            const step = s.steps[stepIdx];
+
+            // Phase badge
+            const badgeEl = document.getElementById('phaseBadge');
+            if (step.phase === 'memory') {
+                badgeEl.innerHTML = `<span class="phase-badge phase-memory">🧠 Memory Creation Phase</span>`;
+            } else {
+                badgeEl.innerHTML = `<span class="phase-badge phase-execution">⚡ Execution Phase</span>`;
+            }
+
+            // Code highlighting
+            s.code.forEach((_, i) => {
+                const el = document.getElementById(`codeLine${i}`);
+                el.className = 'code-line';
+                if (step.activeLines && step.activeLines.includes(i)) {
+                    el.classList.add('active');
+                }
+                if (step.errorLines && step.errorLines.includes(i)) {
+                    el.classList.add('error-line');
+                }
+                if (step.successLines && step.successLines.includes(i)) {
+                    el.classList.add('success-line');
+                }
+            });
+
+            // Memory
+            const memArea = document.getElementById('memoryArea');
+            if (step.memory.length === 0) {
+                memArea.innerHTML = `<div style="color:#444; font-size:0.85rem; padding:20px 0; text-align:center;">— empty —</div>`;
+            } else {
+                memArea.innerHTML = step.memory.map(m => {
+                    let cls = `memory-slot visible ${m.state}`;
+                    if (m.pulse === 'red') cls += ' pulse-red';
+                    if (m.pulse === 'green') cls += ' pulse-green';
+                    return `
+        <div class="${cls}">
+          <span class="var-name">${m.name}</span>
+          <span class="var-value">${m.value}</span>
+        </div>
+      `;
+                }).join('');
+            }
+
+            // Narration
+            document.getElementById('narrationIcon').textContent = step.icon;
+            document.getElementById('narrationText').innerHTML = step.narration;
+
+            // Console output
+            const outEl = document.getElementById('consoleOutput');
+            if (step.output.length === 0) {
+                outEl.innerHTML = `<div style="color:#333;">_</div>`;
+            } else {
+                outEl.innerHTML = step.output.map(o =>
+                    `<div class="output-line output-${o.type}">${o.type === 'error' ? '❌ ' : '→ '}${o.text}</div>`
+                ).join('');
+            }
+
+            renderStepIndicator();
+        }
+
+        function nextStep() {
+            const s = scenarios[currentTab];
+            if (currentStep < s.steps.length) {
+                renderStep(currentStep);
+                currentStep++;
+            }
+            if (currentStep >= s.steps.length) {
+                showInsight();
+                document.getElementById('nextBtn').disabled = true;
+                document.getElementById('playBtn').disabled = true;
+            }
+        }
+
+        function play() {
+            if (isPlaying) return;
+            isPlaying = true;
+            document.getElementById('playBtn').disabled = true;
+            document.getElementById('nextBtn').disabled = true;
+
+            const s = scenarios[currentTab];
+
+            function doStep() {
+                if (currentStep >= s.steps.length) {
+                    isPlaying = false;
+                    showInsight();
+                    return;
+                }
+                renderStep(currentStep);
+                currentStep++;
+                animTimer = setTimeout(doStep, speed);
+            }
+            doStep();
+        }
+
+        function resetAnimation() {
+            clearTimeout(animTimer);
+            currentStep = 0;
+            isPlaying = false;
+            document.getElementById('playBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = false;
+            renderCode();
+            document.getElementById('phaseBadge').innerHTML = '';
+            document.getElementById('memoryArea').innerHTML = `<div style="color:#444; font-size:0.85rem; padding:20px 0; text-align:center;">— empty —</div>`;
+            document.getElementById('narrationIcon').textContent = '📖';
+            document.getElementById('narrationText').innerHTML = `Click <strong>Play Animation</strong> to see how JavaScript processes this code step by step, or use <strong>Next Step</strong> to go at your own pace.`;
+            document.getElementById('consoleOutput').innerHTML = `<div style="color:#333;">_</div>`;
+            document.getElementById('keyInsight').innerHTML = '';
+            document.getElementById('keyInsight').classList.remove('visible');
+            renderStepIndicator();
+        }
+
+        function showInsight() {
+            const el = document.getElementById('keyInsight');
+            el.innerHTML = scenarios[currentTab].insight;
+            setTimeout(() => el.classList.add('visible'), 100);
+        }
+
+        function updateSpeed() {
+            speed = parseInt(document.getElementById('speedSelect').value);
+        }
+
+        // Init
+        renderCode();
+        renderStepIndicator();
+    </script>
+
+</body>
+
+</html>

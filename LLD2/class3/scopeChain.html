@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Scope Chain</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: #1d1d1f;
+        }
+
+        .main-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            width: 100%;
+            max-width: 1060px;
+            padding: 16px;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            min-height: 660px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+        }
+
+        .title {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.8px;
+            margin-bottom: 24px;
+            opacity: 0;
+            transform: translateY(-20px);
+            color: #1d1d1f;
+        }
+
+        .title.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .content-area {
+            display: flex;
+            align-items: flex-start;
+            gap: 32px;
+            width: 100%;
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        .content-area.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* ===== CODE PANEL ===== */
+        .code-panel {
+            width: 380px;
+            flex-shrink: 0;
+            background: #1e1e2e;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 13px 16px;
+            background: #181825;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .code-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+        }
+
+        .code-dot.red {
+            background: #ff5f57;
+        }
+
+        .code-dot.yellow {
+            background: #febc2e;
+        }
+
+        .code-dot.green {
+            background: #28c840;
+        }
+
+        .code-filename {
+            margin-left: auto;
+            font-size: 12px;
+            color: #6c7086;
+            font-weight: 500;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .code-body {
+            padding: 16px 0;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13.5px;
+            line-height: 1.75;
+            color: #cdd6f4;
+            overflow-x: auto;
+            counter-reset: line;
+        }
+
+        .code-line {
+            display: block;
+            padding: 0 20px 0 0;
+            border-left: 3px solid transparent;
+            transition: background 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            white-space: pre;
+        }
+
+        .code-line.highlight {
+            background: rgba(137, 180, 250, 0.08);
+            border-left-color: #89b4fa;
+        }
+
+        .code-line.highlight-found {
+            background: rgba(166, 227, 161, 0.08);
+            border-left-color: #a6e3a1;
+        }
+
+        .line-num {
+            display: inline-block;
+            width: 36px;
+            text-align: right;
+            padding-right: 16px;
+            color: #45475a;
+            font-size: 12px;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        /* Catppuccin Mocha-inspired syntax */
+        .s-kw {
+            color: #cba6f7;
+        }
+
+        /* purple - keywords */
+        .s-fn {
+            color: #89b4fa;
+        }
+
+        /* blue - function names */
+        .s-str {
+            color: #a6e3a1;
+        }
+
+        /* green - strings */
+        .s-var {
+            color: #f9e2af;
+        }
+
+        /* yellow - variables */
+        .s-prop {
+            color: #89dceb;
+        }
+
+        /* teal - properties/methods */
+        .s-punc {
+            color: #a6adc8;
+        }
+
+        /* gray - punctuation */
+        .s-call {
+            color: #89b4fa;
+        }
+
+        /* blue - function calls */
+        .s-obj {
+            color: #f5c2e7;
+        }
+
+        /* pink - objects */
+
+        /* ===== SCOPE VISUALIZATION ===== */
+        .scope-area {
+            flex: 1;
+            position: relative;
+            min-height: 500px;
+        }
+
+        .scope-box {
+            position: relative;
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 16px;
+            opacity: 0;
+            transform: scale(0.92);
+        }
+
+        .scope-box.visible {
+            opacity: 1;
+            transform: scale(1);
+            transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .global-scope {
+            width: 100%;
+            max-width: 520px;
+            height: 470px;
+            background: linear-gradient(145deg, #f8f8fa 0%, #f0f0f5 100%);
+            border: 2px solid #d2d2d7;
+            padding-bottom: 18px;
+        }
+
+        .outer-scope {
+            width: 92%;
+            max-width: 460px;
+            height: 360px;
+            background: linear-gradient(145deg, #ededf2 0%, #e5e5ec 100%);
+            border: 2px solid #c7c7cc;
+            margin-top: 8px;
+        }
+
+        .inner-scope {
+            width: 88%;
+            max-width: 380px;
+            height: 195px;
+            background: linear-gradient(145deg, #e2e2e8 0%, #d8d8e0 100%);
+            border: 2px solid #b0b0b8;
+            margin-top: 8px;
+        }
+
+        .scope-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #98989f;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2px;
+        }
+
+        .scope-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d1d1f;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        .scope-name-sub {
+            font-size: 12px;
+            font-weight: 500;
+            color: #98989f;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        /* Variable pills */
+        .var-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 6px 14px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1.5px solid #d2d2d7;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1d1d1f;
+            opacity: 0;
+            transform: translateY(6px);
+            backdrop-filter: blur(8px);
+        }
+
+        .var-pill.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .var-pill.found {
+            border-color: #34c759;
+            background: rgba(52, 199, 89, 0.1);
+            box-shadow: 0 0 16px rgba(52, 199, 89, 0.25), 0 0 32px rgba(52, 199, 89, 0.08);
+            animation: glowPulse 2s ease-in-out infinite;
+            transition: all 0.5s ease;
+        }
+
+        @keyframes glowPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 16px rgba(52, 199, 89, 0.25), 0 0 32px rgba(52, 199, 89, 0.08);
+            }
+
+            50% {
+                box-shadow: 0 0 24px rgba(52, 199, 89, 0.4), 0 0 48px rgba(52, 199, 89, 0.12);
+            }
+        }
+
+        .vp-kw {
+            color: #af52de;
+        }
+
+        .vp-name {
+            color: #007aff;
+        }
+
+        .vp-val {
+            color: #ff9500;
+        }
+
+        .vp-punc {
+            color: #8e8e93;
+        }
+
+        /* Lookup badge */
+        .lookup-badge {
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        .lookup-badge.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.5s ease;
+        }
+
+        .lookup-badge-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #98989f;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .lookup-badge-var {
+            padding: 3px 12px;
+            border-radius: 8px;
+            background: rgba(0, 122, 255, 0.06);
+            border: 1.5px solid rgba(0, 122, 255, 0.18);
+            font-family: 'SF Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            color: #007aff;
+        }
+
+        /* Search icon */
+        .search-icon {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            opacity: 0;
+            z-index: 100;
+            filter: drop-shadow(0 3px 8px rgba(0, 122, 255, 0.3));
+            pointer-events: none;
+        }
+
+        .search-icon.visible {
+            opacity: 1;
+            transition: opacity 0.4s ease;
+        }
+
+        .search-glow {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, transparent 70%);
+            animation: searchPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes searchPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+
+            50% {
+                transform: scale(1.6);
+                opacity: 0;
+            }
+        }
+
+        .search-icon svg {
+            width: 44px;
+            height: 44px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Status pills */
+        .status-pill {
+            position: absolute;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 14px;
+            border-radius: 100px;
+            opacity: 0;
+            transform: translateX(8px) scale(0.95);
+            z-index: 200;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .status-pill.visible {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .status-pill.not-found {
+            background: rgba(255, 59, 48, 0.07);
+            color: #ff3b30;
+            border: 1.5px solid rgba(255, 59, 48, 0.18);
+        }
+
+        .status-pill.found-pill {
+            background: rgba(52, 199, 89, 0.07);
+            color: #28a745;
+            border: 1.5px solid rgba(52, 199, 89, 0.18);
+        }
+
+        .scope-box.checking {
+            border-color: #007aff !important;
+            box-shadow: inset 0 0 20px rgba(0, 122, 255, 0.04), 0 0 10px rgba(0, 122, 255, 0.06);
+            transition: all 0.35s ease;
+        }
+
+        .scope-box.found-scope {
+            border-color: #34c759 !important;
+            box-shadow: inset 0 0 20px rgba(52, 199, 89, 0.04), 0 0 10px rgba(52, 199, 89, 0.06);
+            transition: all 0.35s ease;
+        }
+
+        /* Arrow SVG */
+        .arrow-svg {
+            position: absolute;
+            z-index: 60;
+            opacity: 0;
+            pointer-events: none;
+            left: 0;
+            top: 0;
+        }
+
+        .arrow-svg.visible {
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Console output */
+        .console-output {
+            position: absolute;
+            bottom: 42px;
+            left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 24px;
+            border-radius: 12px;
+            background: #1e1e2e;
+            border: 1.5px solid #313244;
+            opacity: 0;
+            pointer-events: none;
+            white-space: nowrap;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .console-output.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .console-icon {
+            font-size: 11px;
+            font-weight: 700;
+            color: #45475a;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 2px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .console-chevron {
+            color: #a6e3a1;
+            font-family: 'SF Mono', monospace;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .console-text {
+            font-family: 'SF Mono', monospace;
+            font-size: 14px;
+            color: #a6e3a1;
+            font-weight: 500;
+        }
+
+        /* Bottom message */
+        .bottom-message {
+            position: absolute;
+            bottom: 6px;
+            left: 50%;
+            transform: translateX(-50%) translateY(8px);
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+            opacity: 0;
+            white-space: nowrap;
+            letter-spacing: -0.3px;
+        }
+
+        .bottom-message.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* ===== CONTROLS BAR ===== */
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 22px;
+            background: #fafafa;
+            border-radius: 16px;
+            border: 1px solid #e5e5ea;
+            margin-top: 8px;
+            box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .ctrl-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            letter-spacing: -0.1px;
+        }
+
+        .ctrl-btn:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+
+        .ctrl-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .ctrl-btn svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        .btn-prev {
+            background: #fff;
+            color: #1d1d1f;
+            border: 1.5px solid #d1d1d6;
+        }
+
+        .btn-prev:hover:not(:disabled) {
+            background: #f2f2f7;
+        }
+
+        .btn-next {
+            background: #007aff;
+            color: #fff;
+        }
+
+        .btn-next:hover:not(:disabled) {
+            background: #0066d6;
+        }
+
+        .btn-play {
+            background: #34c759;
+            color: #fff;
+        }
+
+        .btn-play:hover:not(:disabled) {
+            background: #2db84d;
+        }
+
+        .btn-play.is-paused {
+            background: #ff9500;
+        }
+
+        .btn-play.is-paused:hover:not(:disabled) {
+            background: #e68600;
+        }
+
+        .btn-stop {
+            background: #ff3b30;
+            color: #fff;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #e0352b;
+        }
+
+        .btn-reset {
+            background: #fff;
+            color: #8e8e93;
+            border: 1.5px solid #d1d1d6;
+        }
+
+        .btn-reset:hover:not(:disabled) {
+            background: #f2f2f7;
+            color: #1d1d1f;
+        }
+
+        .ctrl-divider {
+            width: 1px;
+            height: 24px;
+            background: #d1d1d6;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .step-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #d1d1d6;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .step-dot:hover {
+            background: #a0a0a5;
+        }
+
+        .step-dot.active {
+            background: #007aff;
+            box-shadow: 0 0 6px rgba(0, 122, 255, 0.4);
+            transform: scale(1.35);
+        }
+
+        .step-dot.completed {
+            background: #34c759;
+        }
+
+        .step-count {
+            font-size: 12px;
+            font-weight: 600;
+            color: #8e8e93;
+            margin-left: 4px;
+            min-width: 50px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .state-chip {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            min-width: 76px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.03);
+            color: #8e8e93;
+        }
+
+        .state-chip.s-playing {
+            color: #34c759;
+            background: rgba(52, 199, 89, 0.08);
+        }
+
+        .state-chip.s-paused {
+            color: #ff9500;
+            background: rgba(255, 149, 0, 0.08);
+        }
+
+        .state-chip.s-done {
+            color: #007aff;
+            background: rgba(0, 122, 255, 0.08);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-wrapper">
+        <div class="container" id="container">
+            <div class="title" id="title">JavaScript Scope Chain</div>
+
+            <div class="content-area" id="contentArea">
+                <!-- Code Panel -->
+                <div class="code-panel" id="codePanel">
+                    <div class="code-header">
+                        <div class="code-dot red"></div>
+                        <div class="code-dot yellow"></div>
+                        <div class="code-dot green"></div>
+                        <span class="code-filename">scope.js</span>
+                    </div>
+                    <div class="code-body" id="codeBody"></div>
+                </div>
+
+                <!-- Scope Visualization -->
+                <div class="scope-area" id="scopeArea">
+                    <div class="scope-box global-scope" id="globalScope">
+                        <span class="scope-label">Global Scope</span>
+                        <span class="scope-name-sub">outer → fn</span>
+
+                        <div class="scope-box outer-scope" id="outerScope">
+                            <span class="scope-label">Function Scope</span>
+                            <span class="scope-name">outer()</span>
+                            <div class="var-pill" id="outerVarPill">
+                                <span class="vp-kw">let</span>
+                                <span class="vp-name">outerVar</span>
+                                <span class="vp-punc">=</span>
+                                <span class="vp-val">"I am outer"</span>
+                            </div>
+
+                            <div class="scope-box inner-scope" id="innerScope">
+                                <span class="scope-label">Function Scope</span>
+                                <span class="scope-name">inner()</span>
+                                <div class="var-pill" id="innerConsolePill">
+                                    <span class="vp-punc">console.log(</span><span class="vp-name">outerVar</span><span
+                                        class="vp-punc">)</span>
+                                </div>
+                                <div class="lookup-badge" id="lookupBadge">
+                                    <span class="lookup-badge-label">Resolving</span>
+                                    <span class="lookup-badge-var">outerVar</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Icon -->
+                    <div class="search-icon" id="searchIcon">
+                        <div class="search-glow"></div>
+                        <svg viewBox="0 0 44 44" fill="none">
+                            <circle cx="19" cy="19" r="11" stroke="#007aff" stroke-width="2.5"
+                                fill="rgba(0,122,255,0.06)" />
+                            <line x1="27" y1="27" x2="38" y2="38" stroke="#007aff" stroke-width="3"
+                                stroke-linecap="round" />
+                        </svg>
+                    </div>
+
+                    <!-- Status pills -->
+                    <div class="status-pill not-found" id="statusInner">✕ Not in inner()</div>
+                    <div class="status-pill found-pill" id="statusOuter">✓ Found in outer()!</div>
+
+                    <!-- Arrow -->
+                    <svg class="arrow-svg" id="arrow1" width="520" height="470">
+                        <defs>
+                            <marker id="ah1" markerWidth="8" markerHeight="6" refX="4" refY="3" orient="auto">
+                                <polygon points="0 0, 8 3, 0 6" fill="#007aff" />
+                            </marker>
+                        </defs>
+                        <path d="" stroke="#007aff" stroke-width="2" stroke-dasharray="6,4" fill="none"
+                            marker-end="url(#ah1)" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="console-output" id="consoleOutput">
+                <span class="console-icon">Console</span>
+                <span class="console-chevron">❯</span>
+                <span class="console-text">"I am outer"</span>
+            </div>
+
+            <div class="bottom-message" id="bottomMessage">JavaScript searches outward through parent scopes.</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-bar" id="controlsBar">
+            <button class="ctrl-btn btn-prev" id="btnPrev" disabled>
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path
+                        d="M11.7 1.3a1 1 0 010 1.4L6.4 8l5.3 5.3a1 1 0 01-1.4 1.4l-6-6a1 1 0 010-1.4l6-6a1 1 0 011.4 0z" />
+                </svg>
+                Prev
+            </button>
+            <button class="ctrl-btn btn-next" id="btnNext">
+                Next
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path
+                        d="M4.3 1.3a1 1 0 011.4 0l6 6a1 1 0 010 1.4l-6 6a1 1 0 01-1.4-1.4L9.6 8 4.3 2.7a1 1 0 010-1.4z" />
+                </svg>
+            </button>
+            <div class="ctrl-divider"></div>
+            <button class="ctrl-btn btn-play" id="btnPlay">
+                <svg viewBox="0 0 16 16" fill="currentColor" id="playIcon">
+                    <path d="M4 2.5v11a.5.5 0 00.77.42l9-5.5a.5.5 0 000-.84l-9-5.5A.5.5 0 004 2.5z" />
+                </svg>
+                <span id="playLabel">Play</span>
+            </button>
+            <button class="ctrl-btn btn-stop" id="btnStop" disabled>
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <rect x="3" y="3" width="10" height="10" rx="1.5" />
+                </svg>
+                Stop
+            </button>
+            <button class="ctrl-btn btn-reset" id="btnReset">
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 1.5A6.5 6.5 0 001.5 8H0l2.5 3L5 8H3a5 5 0 11.77 2.66l-1.34 1A6.5 6.5 0 108 1.5z" />
+                </svg>
+                Reset
+            </button>
+            <div class="ctrl-divider"></div>
+            <div class="step-indicator" id="stepDots"></div>
+            <span class="step-count" id="stepCount">0 / 13</span>
+            <div class="ctrl-divider"></div>
+            <span class="state-chip" id="stateChip">READY</span>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const TOTAL = 13;
+        let current = 0;
+        let autoTimer = null;
+        let isPlaying = false;
+        let isPaused = false;
+
+        // ===== BUILD CODE BLOCK PROPERLY =====
+        const codeLines = [
+            { num: 1, tokens: [['s-kw', 'function'], ['', ' '], ['s-fn', 'outer'], ['s-punc', '() {']] },
+            { num: 2, tokens: [['', '  '], ['s-kw', 'let'], ['', ' '], ['s-var', 'outerVar'], ['s-punc', ' = '], ['s-str', '"I am outer"'], ['s-punc', ';']] },
+            { num: 3, tokens: [] },
+            { num: 4, tokens: [['', '  '], ['s-kw', 'function'], ['', ' '], ['s-fn', 'inner'], ['s-punc', '() {']] },
+            { num: 5, tokens: [['', '    '], ['s-obj', 'console'], ['s-punc', '.'], ['s-prop', 'log'], ['s-punc', '('], ['s-var', 'outerVar'], ['s-punc', ');']] },
+            { num: 6, tokens: [['', '  '], ['s-punc', '}']] },
+            { num: 7, tokens: [] },
+            { num: 8, tokens: [['', '  '], ['s-call', 'inner'], ['s-punc', '();']] },
+            { num: 9, tokens: [['s-punc', '}']] },
+            { num: 10, tokens: [] },
+            { num: 11, tokens: [['s-call', 'outer'], ['s-punc', '();']] }
+        ];
+
+        function buildCode() {
+            const body = $('codeBody');
+            body.innerHTML = '';
+            codeLines.forEach(line => {
+                const div = document.createElement('div');
+                div.className = 'code-line';
+                div.dataset.line = line.num;
+
+                let html = `<span class="line-num">${line.num}</span>`;
+                line.tokens.forEach(([cls, text]) => {
+                    const escaped = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    if (cls) {
+                        html += `<span class="${cls}">${escaped}</span>`;
+                    } else {
+                        html += escaped;
+                    }
+                });
+                if (line.tokens.length === 0) html += ' ';
+
+                div.innerHTML = html;
+                body.appendChild(div);
+            });
+        }
+
+        // ===== HELPERS =====
+        function rel(el) {
+            const r = el.getBoundingClientRect();
+            const c = $('scopeArea').getBoundingClientRect();
+            return {
+                x: r.left - c.left,
+                y: r.top - c.top,
+                w: r.width,
+                h: r.height,
+                cx: r.left - c.left + r.width / 2,
+                cy: r.top - c.top + r.height / 2,
+                right: r.right - c.left,
+                bottom: r.bottom - c.top
+            };
+        }
+
+        function placeSearch(el, animate) {
+            const icon = $('searchIcon');
+            const p = rel(el);
+            icon.style.transition = animate
+                ? 'left 0.85s cubic-bezier(0.25,0.46,0.45,0.94), top 0.85s cubic-bezier(0.25,0.46,0.45,0.94)'
+                : 'none';
+            icon.style.left = (p.cx - 22) + 'px';
+            icon.style.top = (p.cy - 22) + 'px';
+        }
+
+        function placeStatus(el, scopeEl) {
+            const p = rel(scopeEl);
+            el.style.left = (p.right + 6) + 'px';
+            el.style.top = (p.y + 12) + 'px';
+        }
+
+        function drawArrow(svgEl, fromEl, toEl) {
+            const area = $('scopeArea').getBoundingClientRect();
+            svgEl.setAttribute('width', area.width);
+            svgEl.setAttribute('height', area.height);
+            svgEl.setAttribute('viewBox', `0 0 ${area.width} ${area.height}`);
+
+            const f = rel(fromEl);
+            const t = rel(toEl);
+            const sx = f.right + 8, sy = f.cy;
+            const ex = t.right + 8, ey = t.y + 36;
+            const mx = Math.max(sx, ex) + 24;
+            svgEl.querySelector('path').setAttribute('d', `M${sx} ${sy} C${mx} ${sy}, ${mx} ${ey}, ${ex} ${ey}`);
+        }
+
+        function hlLine(num) {
+            document.querySelectorAll('.code-line').forEach(l => l.classList.remove('highlight', 'highlight-found'));
+            if (num) document.querySelector(`.code-line[data-line="${num}"]`)?.classList.add('highlight');
+        }
+
+        function hlLineFound(num) {
+            document.querySelectorAll('.code-line').forEach(l => l.classList.remove('highlight', 'highlight-found'));
+            if (num) document.querySelector(`.code-line[data-line="${num}"]`)?.classList.add('highlight-found');
+        }
+
+        // ===== STATE MACHINE =====
+        function clearAll() {
+            $('title').classList.remove('visible');
+            $('contentArea').classList.remove('visible');
+            ['globalScope', 'outerScope', 'innerScope'].forEach(id => {
+                $(id).classList.remove('visible', 'checking', 'found-scope');
+            });
+            ['outerVarPill', 'innerConsolePill'].forEach(id => $(id).classList.remove('visible', 'found'));
+            $('lookupBadge').classList.remove('visible');
+            $('searchIcon').classList.remove('visible');
+            $('searchIcon').style.transition = 'none';
+            ['statusInner', 'statusOuter'].forEach(id => $(id).classList.remove('visible'));
+            $('arrow1').classList.remove('visible');
+            $('consoleOutput').classList.remove('visible');
+            $('bottomMessage').classList.remove('visible');
+            hlLine(null);
+        }
+
+        function applyStep(step) {
+            clearAll();
+
+            // 1: Title
+            if (step >= 1) $('title').classList.add('visible');
+
+            // 2: Show layout
+            if (step >= 2) $('contentArea').classList.add('visible');
+
+            // 3: outer() called → line 11
+            if (step >= 3) {
+                $('globalScope').classList.add('visible');
+            }
+
+            // 4: outer() scope
+            if (step >= 4) {
+                $('outerScope').classList.add('visible');
+            }
+
+            // 5: outerVar declared
+            if (step >= 5) {
+                $('outerVarPill').classList.add('visible');
+            }
+
+            // 6: inner() called
+            if (step >= 6) {
+                $('innerScope').classList.add('visible');
+            }
+
+            // 7: inner scope content + lookup
+            if (step >= 7) {
+                $('innerConsolePill').classList.add('visible');
+                $('lookupBadge').classList.add('visible');
+            }
+
+            // 8: search icon at inner
+            if (step >= 8) {
+                $('searchIcon').classList.add('visible');
+                placeSearch($('innerScope'), false);
+                $('innerScope').classList.add('checking');
+            }
+
+            // 9: not found inner
+            if (step >= 9) {
+                $('innerScope').classList.remove('checking');
+                placeSearch($('innerScope'), false);
+                $('searchIcon').classList.add('visible');
+                placeStatus($('statusInner'), $('innerScope'));
+                $('statusInner').classList.add('visible');
+            }
+
+            // 10: move to outer
+            if (step >= 10) {
+                drawArrow($('arrow1'), $('innerScope'), $('outerScope'));
+                $('arrow1').classList.add('visible');
+                placeSearch($('outerScope'), false);
+                $('searchIcon').classList.add('visible');
+                $('outerScope').classList.add('checking');
+            }
+
+            // 11: found!
+            if (step >= 11) {
+                $('outerScope').classList.remove('checking');
+                $('outerScope').classList.add('found-scope');
+                $('outerVarPill').classList.add('found');
+                placeStatus($('statusOuter'), $('outerScope'));
+                $('statusOuter').classList.add('visible');
+                $('searchIcon').classList.remove('visible');
+            }
+
+            // 12: console
+            if (step >= 12) {
+                $('consoleOutput').classList.add('visible');
+            }
+
+            // 13: final
+            if (step >= 13) {
+                $('bottomMessage').classList.add('visible');
+            }
+
+            // Code line highlights per exact step
+            const lineMap = { 3: 11, 4: 1, 5: 2, 6: 8, 7: 5, 8: 5, 9: 5, 10: 5 };
+            const foundLineMap = { 11: 2, 12: 5 };
+
+            if (foundLineMap[step]) hlLineFound(foundLineMap[step]);
+            else if (lineMap[step]) hlLine(lineMap[step]);
+            else hlLine(null);
+        }
+
+        function animateStep(step) {
+            applyStep(step);
+
+            // Animate search icon glide for step 10
+            if (step === 10) {
+                placeSearch($('innerScope'), false);
+                $('searchIcon').classList.add('visible');
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        placeSearch($('outerScope'), true);
+                    });
+                });
+            }
+        }
+
+        function goTo(step) {
+            step = Math.max(0, Math.min(TOTAL, step));
+            current = step;
+            if (step === 0) clearAll();
+            else animateStep(step);
+            updateUI();
+        }
+
+        // ===== DOTS =====
+        const stepNames = {
+            1: 'Title', 2: 'Code & Layout', 3: 'Call outer()', 4: 'outer() Scope',
+            5: 'Declare outerVar', 6: 'Call inner()', 7: 'inner() + Lookup',
+            8: 'Search inner()', 9: 'Not in inner()', 10: 'Move to outer()',
+            11: 'Found!', 12: 'Console Output', 13: 'Final Message'
+        };
+
+        function buildDots() {
+            const c = $('stepDots');
+            c.innerHTML = '';
+            for (let i = 1; i <= TOTAL; i++) {
+                const d = document.createElement('div');
+                d.className = 'step-dot';
+                d.title = stepNames[i];
+                d.addEventListener('click', () => goTo(i));
+                c.appendChild(d);
+            }
+        }
+
+        function updateUI() {
+            $('btnPrev').disabled = current <= 0;
+            $('btnNext').disabled = current >= TOTAL;
+            $('stepCount').textContent = `${current} / ${TOTAL}`;
+
+            const dots = $('stepDots').children;
+            for (let i = 0; i < dots.length; i++) {
+                dots[i].classList.remove('active', 'completed');
+                if (i + 1 < current) dots[i].classList.add('completed');
+                else if (i + 1 === current) dots[i].classList.add('active');
+            }
+
+            const chip = $('stateChip');
+            chip.className = 'state-chip';
+            if (isPlaying && !isPaused) { chip.textContent = 'PLAYING'; chip.classList.add('s-playing'); }
+            else if (isPlaying && isPaused) { chip.textContent = 'PAUSED'; chip.classList.add('s-paused'); }
+            else if (current >= TOTAL) { chip.textContent = 'COMPLETE'; chip.classList.add('s-done'); }
+            else if (current === 0) { chip.textContent = 'READY'; }
+            else { chip.textContent = `STEP ${current}`; }
+
+            const pb = $('btnPlay');
+            pb.classList.remove('is-paused');
+            if (isPlaying && !isPaused) {
+                $('playLabel').textContent = 'Pause';
+                pb.classList.add('is-paused');
+                $('playIcon').innerHTML = '<rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/>';
+            } else {
+                $('playLabel').textContent = 'Play';
+                $('playIcon').innerHTML = '<path d="M4 2.5v11a.5.5 0 00.77.42l9-5.5a.5.5 0 000-.84l-9-5.5A.5.5 0 004 2.5z"/>';
+            }
+
+            $('btnStop').disabled = !isPlaying;
+        }
+
+        function startAuto() {
+            clearInterval(autoTimer);
+            autoTimer = setInterval(() => {
+                if (current < TOTAL) goTo(current + 1);
+                else { clearInterval(autoTimer); isPlaying = false; isPaused = false; updateUI(); }
+            }, 1500);
+        }
+
+        // ===== BUTTON HANDLERS =====
+        $('btnNext').addEventListener('click', () => { if (current < TOTAL) goTo(current + 1); });
+        $('btnPrev').addEventListener('click', () => { if (current > 0) goTo(current - 1); });
+
+        $('btnPlay').addEventListener('click', () => {
+            if (isPlaying && !isPaused) { isPaused = true; clearInterval(autoTimer); updateUI(); return; }
+            if (isPlaying && isPaused) { isPaused = false; startAuto(); updateUI(); return; }
+            if (current >= TOTAL) { current = 0; clearAll(); }
+            isPlaying = true; isPaused = false;
+            startAuto();
+            updateUI();
+        });
+
+        $('btnStop').addEventListener('click', () => {
+            clearInterval(autoTimer); isPlaying = false; isPaused = false; updateUI();
+        });
+
+        $('btnReset').addEventListener('click', () => {
+            clearInterval(autoTimer); isPlaying = false; isPaused = false;
+            current = 0; clearAll(); updateUI();
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); if (current < TOTAL) goTo(current + 1); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); if (current > 0) goTo(current - 1); }
+            if (e.key.toLowerCase() === 'r') $('btnReset').click();
+            if (e.key.toLowerCase() === 'p') $('btnPlay').click();
+            if (e.key.toLowerCase() === 's') $('btnStop').click();
+        });
+
+        // ===== INIT =====
+        buildCode();
+        buildDots();
+        updateUI();
+    </script>
+</body>
+
+</html>

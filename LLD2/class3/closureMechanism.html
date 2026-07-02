@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript Closures — Step by Step</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            color: #1d1d1f;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 12px;
+        }
+
+        .app {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ===== TITLE ===== */
+        .main-title {
+            font-size: 30px;
+            font-weight: 700;
+            letter-spacing: -0.8px;
+            margin: 10px 0 6px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(-12px);
+        }
+
+        .main-title.vis {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.6s cubic-bezier(.25, .46, .45, .94);
+        }
+
+        .sub-title {
+            font-size: 15px;
+            color: #86868b;
+            font-weight: 500;
+            margin-bottom: 14px;
+            text-align: center;
+            opacity: 0;
+        }
+
+        .sub-title.vis {
+            opacity: 1;
+            transition: opacity 0.5s 0.2s ease;
+        }
+
+        /* ===== STAGE ===== */
+        .stage {
+            width: 100%;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            min-height: 520px;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .stage.vis {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.6s cubic-bezier(.25, .46, .45, .94);
+        }
+
+        /* ===== CODE PANEL ===== */
+        .code-panel {
+            width: 360px;
+            flex-shrink: 0;
+            background: #1e1e2e;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .code-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 11px 14px;
+            background: #181825;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .cd {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .cd.r {
+            background: #ff5f57;
+        }
+
+        .cd.y {
+            background: #febc2e;
+        }
+
+        .cd.g {
+            background: #28c840;
+        }
+
+        .code-fname {
+            margin-left: auto;
+            font-size: 11px;
+            color: #585b70;
+            font-family: 'SF Mono', monospace;
+        }
+
+        .code-body {
+            padding: 14px 0;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 12.5px;
+            line-height: 1.8;
+            color: #cdd6f4;
+        }
+
+        .cl {
+            display: block;
+            padding: 0 16px;
+            border-left: 3px solid transparent;
+            transition: background 0.3s, border-color 0.3s;
+            white-space: pre;
+        }
+
+        .cl.hl {
+            background: rgba(137, 180, 250, 0.07);
+            border-left-color: #89b4fa;
+        }
+
+        .cl.hl-g {
+            background: rgba(166, 227, 161, 0.07);
+            border-left-color: #a6e3a1;
+        }
+
+        .cl.hl-warn {
+            background: rgba(249, 226, 175, 0.07);
+            border-left-color: #f9e2af;
+        }
+
+        .ln {
+            display: inline-block;
+            width: 28px;
+            text-align: right;
+            padding-right: 14px;
+            color: #45475a;
+            font-size: 11px;
+            user-select: none;
+        }
+
+        .sk {
+            color: #cba6f7;
+        }
+
+        .sf {
+            color: #89b4fa;
+        }
+
+        .ss {
+            color: #a6e3a1;
+        }
+
+        .sv {
+            color: #f9e2af;
+        }
+
+        .sp {
+            color: #a6adc8;
+        }
+
+        .so {
+            color: #f5c2e7;
+        }
+
+        .sc {
+            color: #89dceb;
+        }
+
+        /* ===== VISUAL PANEL ===== */
+        .vis-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        /* Call Stack */
+        .callstack-section {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.8px;
+            color: #86868b;
+            margin-bottom: 2px;
+        }
+
+        .callstack {
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 3px;
+            min-height: 32px;
+        }
+
+        .cs-frame {
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'SF Mono', monospace;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.4s cubic-bezier(.25, .46, .45, .94);
+        }
+
+        .cs-frame.vis {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .cs-frame.global {
+            background: #f2f2f7;
+            color: #636366;
+            border: 1px solid #e5e5ea;
+        }
+
+        .cs-frame.create {
+            background: rgba(137, 180, 250, 0.1);
+            color: #3a7bd5;
+            border: 1px solid rgba(137, 180, 250, 0.25);
+        }
+
+        .cs-frame.increment {
+            background: rgba(166, 227, 161, 0.1);
+            color: #2d8a4e;
+            border: 1px solid rgba(166, 227, 161, 0.25);
+        }
+
+        .cs-frame.popped {
+            opacity: 0;
+            transform: translateX(30px) scale(0.95);
+            transition: all 0.4s ease;
+        }
+
+        /* Memory / Scope Boxes */
+        .memory-section {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .mem-box {
+            flex: 1;
+            min-width: 180px;
+            border-radius: 14px;
+            padding: 14px 16px;
+            opacity: 0;
+            transform: scale(0.95);
+            transition: all 0.5s cubic-bezier(.25, .46, .45, .94);
+        }
+
+        .mem-box.vis {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .mem-box.global-mem {
+            background: #f8f8fa;
+            border: 1.5px solid #e0e0e5;
+        }
+
+        .mem-box.create-mem {
+            background: linear-gradient(135deg, rgba(137, 180, 250, 0.06), rgba(137, 180, 250, 0.02));
+            border: 1.5px solid rgba(137, 180, 250, 0.2);
+        }
+
+        .mem-box.closure-mem {
+            background: linear-gradient(135deg, rgba(249, 226, 175, 0.08), rgba(249, 226, 175, 0.02));
+            border: 1.5px solid rgba(249, 226, 175, 0.3);
+        }
+
+        .mem-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-bottom: 8px;
+        }
+
+        .mem-title.g-t {
+            color: #86868b;
+        }
+
+        .mem-title.c-t {
+            color: #5b8dd9;
+        }
+
+        .mem-title.cl-t {
+            color: #c4940a;
+        }
+
+        .mem-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-family: 'SF Mono', monospace;
+            font-size: 12px;
+            opacity: 0;
+            transform: translateX(-6px);
+            transition: all 0.35s ease;
+        }
+
+        .mem-row.vis {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .mem-key {
+            color: #007aff;
+            font-weight: 600;
+        }
+
+        .mem-val {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.03);
+            color: #1d1d1f;
+        }
+
+        .mem-val.fn-val {
+            color: #af52de;
+            font-style: italic;
+            font-size: 11px;
+        }
+
+        .mem-val.str-val {
+            color: #ff9500;
+        }
+
+        .mem-val.num-val {
+            color: #ff3b30;
+            font-weight: 700;
+        }
+
+        .mem-val.undef-val {
+            color: #8e8e93;
+            font-style: italic;
+        }
+
+        .mem-val.flash-green {
+            background: rgba(52, 199, 89, 0.12);
+            color: #248a3d;
+            box-shadow: 0 0 8px rgba(52, 199, 89, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        /* Backpack icon */
+        .backpack-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            padding: 3px 10px;
+            border-radius: 8px;
+            background: rgba(249, 226, 175, 0.15);
+            border: 1px solid rgba(249, 226, 175, 0.3);
+            color: #c4940a;
+            font-weight: 600;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.4s ease;
+        }
+
+        .backpack-icon.vis {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Arrow / connection */
+        .arrow-connection {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 0;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .arrow-connection.vis {
+            opacity: 1;
+        }
+
+        .arrow-line {
+            width: 24px;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, #c4940a 0, #c4940a 4px, transparent 4px, transparent 8px);
+        }
+
+        .arrow-tip {
+            color: #c4940a;
+            font-size: 10px;
+        }
+
+        /* Console */
+        .console-section {
+            background: #1e1e2e;
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid #313244;
+            min-height: 36px;
+        }
+
+        .console-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #585b70;
+            margin-bottom: 6px;
+        }
+
+        .console-line {
+            font-family: 'SF Mono', monospace;
+            font-size: 12px;
+            color: #a6e3a1;
+            padding: 2px 0;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: all 0.3s ease;
+        }
+
+        .console-line.vis {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .console-line .chev {
+            color: #585b70;
+            margin-right: 6px;
+        }
+
+        /* Narrator */
+        .narrator {
+            width: 100%;
+            margin-top: 8px;
+            padding: 14px 20px;
+            border-radius: 12px;
+            background: #f8f8fa;
+            border: 1px solid #e5e5ea;
+            min-height: 56px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .narrator-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .narrator-text {
+            font-size: 14px;
+            line-height: 1.55;
+            color: #1d1d1f;
+            font-weight: 450;
+        }
+
+        .narrator-text .hl {
+            color: #007aff;
+            font-weight: 600;
+        }
+
+        .narrator-text .hl-g {
+            color: #248a3d;
+            font-weight: 600;
+        }
+
+        .narrator-text .hl-w {
+            color: #c4940a;
+            font-weight: 600;
+        }
+
+        .narrator-text .hl-r {
+            color: #ff3b30;
+            font-weight: 600;
+        }
+
+        /* ===== CONTROLS ===== */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #fafafa;
+            border-radius: 14px;
+            border: 1px solid #e5e5ea;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 7px 14px;
+            border: none;
+            border-radius: 9px;
+            font-size: 12.5px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .btn-prev {
+            background: #fff;
+            color: #1d1d1f;
+            border: 1.5px solid #d1d1d6;
+        }
+
+        .btn-prev:hover:not(:disabled) {
+            background: #f2f2f7;
+        }
+
+        .btn-next {
+            background: #007aff;
+            color: #fff;
+        }
+
+        .btn-next:hover:not(:disabled) {
+            background: #0066d6;
+        }
+
+        .btn-play {
+            background: #34c759;
+            color: #fff;
+        }
+
+        .btn-play:hover:not(:disabled) {
+            background: #2db84d;
+        }
+
+        .btn-play.paused {
+            background: #ff9500;
+        }
+
+        .btn-play.paused:hover:not(:disabled) {
+            background: #e68600;
+        }
+
+        .btn-stop {
+            background: #ff3b30;
+            color: #fff;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            background: #e0352b;
+        }
+
+        .btn-reset {
+            background: #fff;
+            color: #8e8e93;
+            border: 1.5px solid #d1d1d6;
+        }
+
+        .btn-reset:hover:not(:disabled) {
+            background: #f2f2f7;
+            color: #1d1d1f;
+        }
+
+        .cdiv {
+            width: 1px;
+            height: 22px;
+            background: #d1d1d6;
+        }
+
+        .dots {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #d1d1d6;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .dot:hover {
+            background: #a0a0a5;
+        }
+
+        .dot.active {
+            background: #007aff;
+            box-shadow: 0 0 6px rgba(0, 122, 255, 0.4);
+            transform: scale(1.3);
+        }
+
+        .dot.done {
+            background: #34c759;
+        }
+
+        .step-num {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8e8e93;
+            min-width: 46px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .state-chip {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 3px 9px;
+            border-radius: 5px;
+            min-width: 68px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.03);
+            color: #8e8e93;
+        }
+
+        .state-chip.playing {
+            color: #34c759;
+            background: rgba(52, 199, 89, 0.08);
+        }
+
+        .state-chip.paused {
+            color: #ff9500;
+            background: rgba(255, 149, 0, 0.08);
+        }
+
+        .state-chip.complete {
+            color: #007aff;
+            background: rgba(0, 122, 255, 0.08);
+        }
+
+        /* GC strikethrough */
+        .gc-strike {
+            text-decoration: line-through;
+            opacity: 0.4;
+        }
+
+        /* Scope search animation */
+        @keyframes scopeSearch {
+            0% {
+                box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.3);
+            }
+
+            50% {
+                box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.1);
+            }
+
+            100% {
+                box-shadow: inset 0 0 0 2px rgba(0, 122, 255, 0.3);
+            }
+        }
+
+        .mem-box.searching {
+            animation: scopeSearch 0.8s ease infinite;
+        }
+
+        .mem-box.search-found {
+            box-shadow: inset 0 0 0 2px rgba(52, 199, 89, 0.3);
+            transition: box-shadow 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <div class="main-title" id="title">Closures: The Backpack</div>
+        <div class="sub-title" id="subtitle">Step-by-step trace of a closure in action</div>
+
+        <div class="stage" id="stage">
+            <!-- Left: Code -->
+            <div class="code-panel">
+                <div class="code-header">
+                    <div class="cd r"></div>
+                    <div class="cd y"></div>
+                    <div class="cd g"></div>
+                    <span class="code-fname">closures.js</span>
+                </div>
+                <div class="code-body" id="codeBody"></div>
+            </div>
+
+            <!-- Right: Visualization -->
+            <div class="vis-panel">
+                <div class="callstack-section">
+                    <div class="section-label">Call Stack</div>
+                    <div class="callstack" id="callstack"></div>
+                </div>
+
+                <div class="memory-section" id="memorySection"></div>
+
+                <div class="console-section">
+                    <div class="console-title">Console Output</div>
+                    <div id="consoleOutput"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Narrator -->
+        <div class="narrator" id="narrator">
+            <span class="narrator-icon">💡</span>
+            <div class="narrator-text" id="narratorText">Press <span class="hl">Next</span> or <span
+                    class="hl">Play</span> to begin the trace.</div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-prev" id="btnPrev" disabled>
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path
+                        d="M11.7 1.3a1 1 0 010 1.4L6.4 8l5.3 5.3a1 1 0 01-1.4 1.4l-6-6a1 1 0 010-1.4l6-6a1 1 0 011.4 0z" />
+                </svg>
+                Prev
+            </button>
+            <button class="btn btn-next" id="btnNext">
+                Next
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path
+                        d="M4.3 1.3a1 1 0 011.4 0l6 6a1 1 0 010 1.4l-6 6a1 1 0 01-1.4-1.4L9.6 8 4.3 2.7a1 1 0 010-1.4z" />
+                </svg>
+            </button>
+            <div class="cdiv"></div>
+            <button class="btn btn-play" id="btnPlay">
+                <svg viewBox="0 0 16 16" fill="currentColor" id="playIco">
+                    <path d="M4 2.5v11a.5.5 0 00.77.42l9-5.5a.5.5 0 000-.84l-9-5.5A.5.5 0 004 2.5z" />
+                </svg>
+                <span id="playLbl">Play</span>
+            </button>
+            <button class="btn btn-stop" id="btnStop" disabled>
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <rect x="3" y="3" width="10" height="10" rx="1.5" />
+                </svg>
+                Stop
+            </button>
+            <button class="btn btn-reset" id="btnReset">
+                <svg viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 1.5A6.5 6.5 0 001.5 8H0l2.5 3L5 8H3a5 5 0 11.77 2.66l-1.34 1A6.5 6.5 0 108 1.5z" />
+                </svg>
+                Reset
+            </button>
+            <div class="cdiv"></div>
+            <div class="dots" id="dots"></div>
+            <span class="step-num" id="stepNum">0 / 16</span>
+            <div class="cdiv"></div>
+            <span class="state-chip" id="stateChip">READY</span>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const TOTAL = 16;
+        let cur = 0, timer = null, playing = false, paused = false;
+
+        // ===== CODE LINES =====
+        const lines = [
+            [1, [['sk', 'function'], ['sp', ' '], ['sf', 'createCounter'], ['sp', '() {']]],
+            [2, [['sp', '  '], ['sk', 'let'], ['sp', ' '], ['sv', 'count'], ['sp', ' = '], ['so', '0'], ['sp', ';']]],
+            [3, []],
+            [4, [['sp', '  '], ['sk', 'function'], ['sp', ' '], ['sf', 'increment'], ['sp', '() {']]],
+            [5, [['sp', '    '], ['sv', 'count'], ['sp', ' = '], ['sv', 'count'], ['sp', ' + '], ['so', '1'], ['sp', ';']]],
+            [6, [['sp', '    '], ['so', 'console'], ['sp', '.'], ['sc', 'log'], ['sp', '('], ['ss', '"Count is: "'], ['sp', ' + '], ['sv', 'count'], ['sp', ');']]],
+            [7, [['sp', '  '], ['sp', '}']]],
+            [8, []],
+            [9, [['sp', '  '], ['sk', 'return'], ['sp', ' '], ['sf', 'increment'], ['sp', ';']]],
+            [10, [['sp', '}']]],
+            [11, []],
+            [12, [['sk', 'const'], ['sp', ' '], ['sv', 'myCounter'], ['sp', ' = '], ['sf', 'createCounter'], ['sp', '();']]],
+            [13, []],
+            [14, [['sf', 'myCounter'], ['sp', '();']]],
+            [15, [['sf', 'myCounter'], ['sp', '();']]],
+            [16, [['sf', 'myCounter'], ['sp', '();']]],
+        ];
+
+        function buildCode() {
+            $('codeBody').innerHTML = lines.map(([n, toks]) => {
+                let inner = `<span class="ln">${n}</span>`;
+                toks.forEach(([c, t]) => { inner += c ? `<span class="${c}">${t.replace(/</g, '&lt;')}</span>` : t; });
+                if (!toks.length) inner += ' ';
+                return `<div class="cl" data-line="${n}">${inner}</div>`;
+            }).join('');
+        }
+
+        function buildDots() {
+            $('dots').innerHTML = '';
+            for (let i = 1; i <= TOTAL; i++) {
+                const d = document.createElement('div');
+                d.className = 'dot'; d.title = `Step ${i}`;
+                d.onclick = () => goTo(i);
+                $('dots').appendChild(d);
+            }
+        }
+
+        // ===== HIGHLIGHT HELPERS =====
+        function hlClear() { document.querySelectorAll('.cl').forEach(l => l.className = 'cl'); }
+        function hl(n, cls = 'hl') { hlClear(); if (n) { const el = document.querySelector(`.cl[data-line="${n}"]`); if (el) el.classList.add(cls); } }
+        function hlRange(from, to, cls = 'hl') { hlClear(); for (let i = from; i <= to; i++) { const el = document.querySelector(`.cl[data-line="${i}"]`); if (el) el.classList.add(cls); } }
+
+        // ===== RENDER HELPERS =====
+        function setCallStack(frames) {
+            const el = $('callstack');
+            el.innerHTML = '';
+            frames.forEach(f => {
+                const div = document.createElement('div');
+                div.className = `cs-frame ${f.cls} vis`;
+                div.textContent = f.label;
+                el.appendChild(div);
+            });
+        }
+
+        function setMemory(boxes) {
+            const el = $('memorySection');
+            el.innerHTML = '';
+            boxes.forEach(b => {
+                const box = document.createElement('div');
+                box.className = `mem-box ${b.cls} vis`;
+                if (b.extra) box.classList.add(b.extra);
+                let html = `<div class="mem-title ${b.titleCls}">${b.title}</div>`;
+                b.rows.forEach(r => {
+                    html += `<div class="mem-row vis"><span class="mem-key">${r.key}</span><span class="mem-val ${r.valCls || ''}">${r.val}</span></div>`;
+                });
+                if (b.badge) {
+                    html += `<div class="backpack-icon vis" style="margin-top:8px">${b.badge}</div>`;
+                }
+                if (b.arrow) {
+                    html += `<div class="arrow-connection vis" style="margin-top:6px"><div class="arrow-line"></div><span class="arrow-tip">▶</span><span style="font-size:11px;color:#c4940a;font-weight:600">${b.arrow}</span></div>`;
+                }
+                box.innerHTML = html;
+                el.appendChild(box);
+            });
+        }
+
+        function setConsole(lines) {
+            $('consoleOutput').innerHTML = lines.map(l =>
+                `<div class="console-line vis"><span class="chev">❯</span>${l}</div>`
+            ).join('');
+        }
+
+        function setNarrator(html, icon = '💡') {
+            $('narrator').querySelector('.narrator-icon').textContent = icon;
+            $('narratorText').innerHTML = html;
+        }
+
+        // ===== STEPS =====
+        function applyStep(s) {
+            hlClear();
+            switch (s) {
+                case 0:
+                    $('title').classList.remove('vis');
+                    $('subtitle').classList.remove('vis');
+                    $('stage').classList.remove('vis');
+                    setCallStack([]); setMemory([]); setConsole([]);
+                    setNarrator('Press <span class="hl">Next</span> or <span class="hl">Play</span> to begin the trace.');
+                    break;
+
+                case 1:
+                    $('title').classList.add('vis');
+                    $('subtitle').classList.add('vis');
+                    $('stage').classList.add('vis');
+                    hlRange(1, 10);
+                    setCallStack([{ label: 'Global', cls: 'global' }]);
+                    setMemory([{
+                        cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory',
+                        rows: [
+                            { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                            { key: 'myCounter', val: 'undefined', valCls: 'undef-val' },
+                        ],
+                    }]);
+                    setConsole([]);
+                    setNarrator('JavaScript reads the file. It stores <span class="hl">createCounter</span> as a function in Global Memory. <span class="hl-w">myCounter</span> is declared but not yet assigned.', '📄');
+                    break;
+
+                case 2:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(12);
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'createCounter()', cls: 'create' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'undefined', valCls: 'undef-val' },
+                            ]
+                        },
+                        {
+                            cls: 'create-mem', titleCls: 'c-t', title: 'createCounter() Memory', rows: [
+                                { key: 'count', val: 'undefined', valCls: 'undef-val' },
+                                { key: 'increment', val: 'ƒ ()', valCls: 'fn-val' },
+                            ]
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('<span class="hl">createCounter()</span> is called. A new execution context is pushed onto the Call Stack. In the <em>memory phase</em>, <span class="sv">count</span> is set to <span class="hl-r">undefined</span> and <span class="sf">increment</span> is stored.', '🔨');
+                    break;
+
+                case 3:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(2, 'hl-g');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'createCounter()', cls: 'create' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'undefined', valCls: 'undef-val' },
+                            ]
+                        },
+                        {
+                            cls: 'create-mem', titleCls: 'c-t', title: 'createCounter() Memory', rows: [
+                                { key: 'count', val: '0', valCls: 'num-val flash-green' },
+                                { key: 'increment', val: 'ƒ ()', valCls: 'fn-val' },
+                            ]
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('In the <em>execution phase</em>, <span class="hl-g">count is assigned 0</span>. The function <span class="hl">increment</span> is defined inside createCounter — its <span class="hl-w">lexical scope</span> includes this environment.', '✅');
+                    break;
+
+                case 4:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hlRange(4, 7, 'hl-warn');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'createCounter()', cls: 'create' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'undefined', valCls: 'undef-val' },
+                            ]
+                        },
+                        {
+                            cls: 'create-mem', titleCls: 'c-t', title: 'createCounter() Memory', rows: [
+                                { key: 'count', val: '0', valCls: 'num-val' },
+                                { key: 'increment', val: 'ƒ () + 🎒', valCls: 'fn-val' },
+                            ],
+                            badge: '🎒 Backpack formed!',
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('Here is the <span class="hl-w">key moment</span>: <span class="sf">increment</span> is born inside createCounter. At birth, it forms a <span class="hl-w">closure</span> — a bond with the surrounding variables. It grabs its <span class="hl-w">backpack</span> containing <span class="sv">count</span>.', '🎒');
+                    break;
+
+                case 5:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(9);
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'createCounter()', cls: 'create' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'undefined', valCls: 'undef-val' },
+                            ]
+                        },
+                        {
+                            cls: 'create-mem', titleCls: 'c-t', title: 'createCounter() Memory', rows: [
+                                { key: 'count', val: '0', valCls: 'num-val' },
+                                { key: 'increment', val: 'ƒ () + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('<span class="sk">return increment</span> — the function is <strong>returned</strong>, not called. It is sent out of createCounter as a value, carrying its backpack with it.', '📤');
+                    break;
+
+                case 6:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(12, 'hl-warn');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [
+                                { key: 'count', val: '0', valCls: 'num-val' },
+                            ],
+                            arrow: 'attached to myCounter',
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('createCounter() is <span class="hl-r">popped off</span> the Call Stack. Normally <span class="sv">count</span> would be garbage collected. But it is <strong>NOT</strong> — because <span class="hl-w">increment\'s closure</span> still references it. <span class="hl">myCounter</span> now holds the function + its backpack.', '🔑');
+                    break;
+
+                case 7:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(14);
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'increment() [call 1]', cls: 'increment' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '0', valCls: 'num-val' }],
+                            extra: 'searching',
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('<span class="hl-g">myCounter()</span> is called (first time). JavaScript executes <span class="sf">increment</span>. It encounters <span class="sv">count</span> — looks in local scope… <span class="hl-r">not there</span>. Looks in the <span class="hl-w">closure (backpack)</span>…', '🔍');
+                    break;
+
+                case 8:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(5, 'hl-g');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'increment() [call 1]', cls: 'increment' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '1', valCls: 'num-val flash-green' }],
+                            extra: 'search-found',
+                        },
+                    ]);
+                    setConsole([]);
+                    setNarrator('<span class="hl-g">Found it!</span> <span class="sv">count</span> is <span class="hl-r">0</span> in the closure. Add 1 → <span class="hl-g">count becomes 1</span>. The closure\'s variable is <em>mutated in place</em> — it persists.', '✅');
+                    break;
+
+                case 9:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(6, 'hl-g');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '1', valCls: 'num-val' }],
+                        },
+                    ]);
+                    setConsole(['Count is: 1']);
+                    setNarrator('Logs <span class="hl-g">"Count is: 1"</span>. The increment() execution context is popped off the stack. But the <span class="hl-w">closure persists</span> with count = 1.', '📝');
+                    break;
+
+                case 10:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(15);
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'increment() [call 2]', cls: 'increment' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '1', valCls: 'num-val' }],
+                            extra: 'searching',
+                        },
+                    ]);
+                    setConsole(['Count is: 1']);
+                    setNarrator('<span class="hl-g">myCounter()</span> called again (second time). Looks for <span class="sv">count</span> in the closure — it\'s <span class="hl-r">1</span> now (persisted from the first call!).', '🔍');
+                    break;
+
+                case 11:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(5, 'hl-g');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '2', valCls: 'num-val flash-green' }],
+                            extra: 'search-found',
+                        },
+                    ]);
+                    setConsole(['Count is: 1', 'Count is: 2']);
+                    setNarrator('1 + 1 = <span class="hl-g">2</span>. Logs <span class="hl-g">"Count is: 2"</span>. Same variable, same closure — not re-created, just <em>updated</em>.', '✅');
+                    break;
+
+                case 12:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(16);
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                        { label: 'increment() [call 3]', cls: 'increment' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '2', valCls: 'num-val' }],
+                            extra: 'searching',
+                        },
+                    ]);
+                    setConsole(['Count is: 1', 'Count is: 2']);
+                    setNarrator('Third call. <span class="sv">count</span> is <span class="hl-r">2</span> in the closure. Adding 1…', '🔍');
+                    break;
+
+                case 13:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hl(6, 'hl-g');
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '3', valCls: 'num-val flash-green' }],
+                            extra: 'search-found',
+                        },
+                    ]);
+                    setConsole(['Count is: 1', 'Count is: 2', 'Count is: 3']);
+                    setNarrator('<span class="hl-g">count becomes 3</span>. Logs <span class="hl-g">"Count is: 3"</span>. Three calls, one persistent variable — living in the closure.', '✅');
+                    break;
+
+                case 14:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hlClear();
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'Global Memory', rows: [
+                                { key: 'createCounter', val: 'ƒ ()', valCls: 'fn-val' },
+                                { key: 'myCounter', val: 'ƒ increment() + 🎒', valCls: 'fn-val' },
+                            ]
+                        },
+                        {
+                            cls: 'closure-mem', titleCls: 'cl-t', title: '🎒 Closure (createCounter)',
+                            rows: [{ key: 'count', val: '3', valCls: 'num-val' }],
+                        },
+                    ]);
+                    setConsole(['Count is: 1', 'Count is: 2', 'Count is: 3']);
+                    setNarrator('The variable <span class="sv">count</span> is <strong>not re-created</strong> each time. It is the <em>same variable</em>, living in the closure, <span class="hl-w">persisting between calls</span>.', '🧠');
+                    break;
+
+                case 15:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hlClear();
+                    setCallStack([
+                        { label: 'Global', cls: 'global' },
+                    ]);
+                    setMemory([
+                        {
+                            cls: 'global-mem', titleCls: 'g-t', title: 'DevTools → Scope Panel', rows: [
+                                { key: 'Scope', val: 'Local', valCls: '' },
+                                { key: 'Closure', val: '(createCounter)', valCls: 'fn-val' },
+                                { key: '  count', val: '3', valCls: 'num-val flash-green' },
+                            ]
+                        },
+                    ]);
+                    setConsole(['Count is: 1', 'Count is: 2', 'Count is: 3']);
+                    setNarrator('Open <span class="hl">Chrome DevTools</span> → set a breakpoint inside increment → look at the <strong>Scope panel</strong>. You\'ll see a "Closure (createCounter)" section with <span class="sv">count</span> and its value. DevTools literally shows you the <span class="hl-w">backpack</span>.', '🔧');
+                    break;
+
+                case 16:
+                    $('title').classList.add('vis'); $('subtitle').classList.add('vis'); $('stage').classList.add('vis');
+                    hlClear();
+                    setCallStack([]);
+                    setMemory([]);
+                    setConsole(['Count is: 1', 'Count is: 2', 'Count is: 3']);
+                    setNarrator(`
+                <strong>Key Takeaways:</strong><br><br>
+                <span class="hl-w">1.</span> A closure is formed when a function is defined inside another function.<br>
+                <span class="hl-w">2.</span> The inner function carries a <span class="hl-w">backpack</span> of variables from its parent scope.<br>
+                <span class="hl-w">3.</span> These variables <span class="hl-g">persist</span> even after the parent function finishes executing.<br>
+                <span class="hl-w">4.</span> Each call to the returned function accesses the <em>same</em> closure variables.<br>
+                <span class="hl-w">5.</span> This is not magic — <span class="hl">DevTools shows you the closure</span>.
+            `, '🎓');
+                    break;
+            }
+        }
+
+        function goTo(s) {
+            cur = Math.max(0, Math.min(TOTAL, s));
+            applyStep(cur);
+            updateUI();
+        }
+
+        function updateUI() {
+            $('btnPrev').disabled = cur <= 0;
+            $('btnNext').disabled = cur >= TOTAL;
+            $('stepNum').textContent = `${cur} / ${TOTAL}`;
+
+            [...$('dots').children].forEach((d, i) => {
+                d.classList.remove('active', 'done');
+                if (i + 1 < cur) d.classList.add('done');
+                else if (i + 1 === cur) d.classList.add('active');
+            });
+
+            const chip = $('stateChip');
+            chip.className = 'state-chip';
+            if (playing && !paused) { chip.textContent = 'PLAYING'; chip.classList.add('playing'); }
+            else if (playing && paused) { chip.textContent = 'PAUSED'; chip.classList.add('paused'); }
+            else if (cur >= TOTAL) { chip.textContent = 'COMPLETE'; chip.classList.add('complete'); }
+            else if (cur === 0) chip.textContent = 'READY';
+            else chip.textContent = `STEP ${cur}`;
+
+            const pb = $('btnPlay');
+            pb.classList.remove('paused');
+            if (playing && !paused) {
+                $('playLbl').textContent = 'Pause'; pb.classList.add('paused');
+                $('playIco').innerHTML = '<rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/>';
+            } else {
+                $('playLbl').textContent = 'Play';
+                $('playIco').innerHTML = '<path d="M4 2.5v11a.5.5 0 00.77.42l9-5.5a.5.5 0 000-.84l-9-5.5A.5.5 0 004 2.5z"/>';
+            }
+            $('btnStop').disabled = !playing;
+        }
+
+        function autoPlay() {
+            clearInterval(timer);
+            timer = setInterval(() => {
+                if (cur < TOTAL) goTo(cur + 1);
+                else { clearInterval(timer); playing = false; paused = false; updateUI(); }
+            }, 2200);
+        }
+
+        $('btnNext').onclick = () => { if (cur < TOTAL) goTo(cur + 1); };
+        $('btnPrev').onclick = () => { if (cur > 0) goTo(cur - 1); };
+        $('btnPlay').onclick = () => {
+            if (playing && !paused) { paused = true; clearInterval(timer); updateUI(); return; }
+            if (playing && paused) { paused = false; autoPlay(); updateUI(); return; }
+            if (cur >= TOTAL) { cur = 0; applyStep(0); }
+            playing = true; paused = false; autoPlay(); updateUI();
+        };
+        $('btnStop').onclick = () => { clearInterval(timer); playing = false; paused = false; updateUI(); };
+        $('btnReset').onclick = () => { clearInterval(timer); playing = false; paused = false; cur = 0; applyStep(0); updateUI(); };
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); if (cur < TOTAL) goTo(cur + 1); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); if (cur > 0) goTo(cur - 1); }
+            if (e.key.toLowerCase() === 'r') $('btnReset').click();
+            if (e.key.toLowerCase() === 'p') $('btnPlay').click();
+            if (e.key.toLowerCase() === 's') $('btnStop').click();
+        });
+
+        buildCode();
+        buildDots();
+        updateUI();
+        applyStep(0);
+    </script>
+</body>
+
+</html>
