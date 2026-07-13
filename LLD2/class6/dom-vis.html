@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML to DOM — Educational Animation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1117;
+            color: #e1e4e8;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .stage {
+            width: 1200px;
+            height: 680px;
+            position: relative;
+        }
+
+        .step-indicator {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 20;
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2d333b;
+            transition: background .4s, transform .4s;
+        }
+
+        .step-dot.active {
+            background: #58a6ff;
+            transform: scale(1.5);
+        }
+
+        .step-dot.done {
+            background: #3fb950;
+        }
+
+        .controls {
+            display: flex;
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .ctrl-btn {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 10px 30px;
+            border: 1.5px solid #30363d;
+            border-radius: 8px;
+            background: #161b22;
+            color: #c9d1d9;
+            cursor: pointer;
+            transition: all .2s;
+            user-select: none;
+        }
+
+        .ctrl-btn:hover:not(:disabled) {
+            background: #1f2633;
+            border-color: #58a6ff;
+            color: #fff;
+        }
+
+        .ctrl-btn:disabled {
+            opacity: .25;
+            cursor: not-allowed;
+        }
+
+        .ctrl-btn.primary {
+            background: #238636;
+            border-color: #238636;
+            color: #fff;
+        }
+
+        .ctrl-btn.primary:hover:not(:disabled) {
+            background: #2ea043;
+        }
+
+        /* LEFT PANEL */
+        .left-panel {
+            position: absolute;
+            left: 24px;
+            top: 40px;
+            width: 440px;
+            height: 620px;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity .5s, transform .5s;
+        }
+
+        .left-panel.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .file-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            height: 28px;
+        }
+
+        .file-icon {
+            width: 18px;
+            height: 22px;
+            background: #e5853d;
+            border-radius: 2px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .file-icon::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            border: 4px solid;
+            border-color: #0f1117 #0f1117 #e5853d #e5853d;
+        }
+
+        .file-name {
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            color: #e5853d;
+            font-weight: 500;
+        }
+
+        .file-tag {
+            font-size: 9px;
+            background: #2d333b;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #8b949e;
+            margin-left: auto;
+            transition: all .3s;
+        }
+
+        .file-tag.green {
+            background: rgba(35, 134, 54, .18);
+            color: #3fb950;
+        }
+
+        .code-block {
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 12px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            line-height: 1.7;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .code-line {
+            opacity: .3;
+            transition: opacity .35s, background .35s;
+            padding: 0 14px;
+            display: block;
+        }
+
+        .code-line.hl {
+            opacity: 1;
+            background: rgba(88, 166, 255, .07);
+        }
+
+        .code-line.vis {
+            opacity: .8;
+        }
+
+        .t {
+            color: #ff7b72;
+        }
+
+        .a {
+            color: #79c0ff;
+        }
+
+        .s {
+            color: #a5d6ff;
+        }
+
+        .x {
+            color: #c9d1d9;
+        }
+
+        .browser-box {
+            margin-top: 12px;
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity .5s, transform .5s;
+            flex-shrink: 0;
+        }
+
+        .browser-box.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .browser-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            background: #0d1117;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .bd {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+        }
+
+        .bd.r {
+            background: #f85149;
+        }
+
+        .bd.y {
+            background: #d29922;
+        }
+
+        .bd.g {
+            background: #3fb950;
+        }
+
+        .browser-url {
+            margin-left: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 10px;
+            color: #484f58;
+            background: #161b22;
+            padding: 3px 10px;
+            border-radius: 4px;
+            flex: 1;
+        }
+
+        .browser-content {
+            padding: 16px 18px;
+        }
+
+        .browser-content h1 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #e6edf3;
+            margin-bottom: 4px;
+            transition: color .4s;
+        }
+
+        .browser-content h1.flash {
+            color: #ffa657;
+        }
+
+        .browser-content p {
+            font-size: 12px;
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+
+        .browser-content ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 10px;
+        }
+
+        .browser-content li {
+            font-size: 12px;
+            color: #c9d1d9;
+            padding: 1px 0;
+        }
+
+        .browser-content li::before {
+            content: '• ';
+            color: #58a6ff;
+        }
+
+        .browser-content button {
+            font-family: 'Inter', sans-serif;
+            padding: 6px 16px;
+            background: #238636;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .js-box {
+            margin-top: 12px;
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            padding: 10px 14px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity .5s, transform .5s;
+            flex-shrink: 0;
+        }
+
+        .js-box.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .js-label {
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: #ffa657;
+            margin-bottom: 6px;
+        }
+
+        .js-code {
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            line-height: 1.7;
+        }
+
+        .js-line {
+            opacity: .25;
+            transition: opacity .35s;
+        }
+
+        .js-line.hl {
+            opacity: 1;
+        }
+
+        .kw {
+            color: #ff7b72;
+        }
+
+        .fn {
+            color: #d2a8ff;
+        }
+
+        .ob {
+            color: #ffa657;
+        }
+
+        .pr {
+            color: #79c0ff;
+        }
+
+        .op {
+            color: #c9d1d9;
+        }
+
+        .divider-line {
+            position: absolute;
+            left: 480px;
+            top: 50px;
+            width: 1px;
+            height: 600px;
+            background: #21262d;
+            opacity: 0;
+            transition: opacity .5s;
+        }
+
+        .divider-line.show {
+            opacity: 1;
+        }
+
+        .parse-tag {
+            position: absolute;
+            left: 480px;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(88, 166, 255, .08);
+            border: 1px solid rgba(88, 166, 255, .2);
+            color: #58a6ff;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 16px;
+            letter-spacing: .08em;
+            opacity: 0;
+            transition: opacity .4s;
+            z-index: 5;
+            white-space: nowrap;
+        }
+
+        .parse-tag.show {
+            opacity: 1;
+        }
+
+        /* RIGHT PANEL — DOM */
+        .right-panel {
+            position: absolute;
+            right: 0;
+            top: 40px;
+            width: 710px;
+            height: 620px;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: opacity .5s, transform .5s;
+        }
+
+        .right-panel.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .dom-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #58a6ff;
+            margin-bottom: 4px;
+            opacity: 0;
+            transition: opacity .4s;
+            text-align: center;
+        }
+
+        .dom-title.show {
+            opacity: 1;
+        }
+
+        .tree-svg {
+            width: 710px;
+            height: 600px;
+        }
+
+        .tree-edge {
+            stroke: #30363d;
+            stroke-width: 1.2;
+            fill: none;
+            stroke-dasharray: 200;
+            stroke-dashoffset: 200;
+            transition: stroke-dashoffset .5s ease-out;
+        }
+
+        .tree-edge.show {
+            stroke-dashoffset: 0;
+        }
+
+        .tree-node {
+            opacity: 0;
+            transition: opacity .4s;
+        }
+
+        .tree-node.show {
+            opacity: 1;
+        }
+
+        .tree-node rect {
+            fill: #161b22;
+            stroke: #30363d;
+            stroke-width: 1.2;
+            rx: 5;
+            ry: 5;
+            transition: stroke .3s, fill .3s;
+        }
+
+        .tree-node.highlight rect {
+            stroke: #ffa657;
+            fill: #1c1a15;
+        }
+
+        .tree-node text {
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            fill: #c9d1d9;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .tree-node .tv {
+            font-size: 9px;
+            fill: #6e7681;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            opacity: 0;
+            transition: opacity .5s;
+            pointer-events: none;
+            z-index: 15;
+        }
+
+        .overlay.show {
+            opacity: 1;
+        }
+
+        .overlay h2 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #e6edf3;
+            margin-bottom: 10px;
+        }
+
+        .overlay p {
+            font-size: 15px;
+            color: #8b949e;
+            line-height: 1.6;
+            max-width: 440px;
+        }
+
+        .takeaway-box {
+            background: #161b22;
+            border: 1.5px solid #30363d;
+            border-radius: 14px;
+            padding: 36px 52px;
+            text-align: center;
+        }
+
+        .takeaway-line {
+            font-size: 17px;
+            line-height: 2.2;
+            color: #c9d1d9;
+            font-weight: 500;
+        }
+
+        .ho {
+            color: #ffa657;
+            font-weight: 700;
+        }
+
+        .hb {
+            color: #58a6ff;
+            font-weight: 700;
+        }
+
+        .hg {
+            color: #3fb950;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="stage" id="stage">
+        <div class="step-indicator" id="dots"></div>
+
+        <div class="divider-line" id="divider"></div>
+        <div class="parse-tag" id="parseTag">⚙ PARSING →</div>
+
+        <!-- LEFT -->
+        <div class="left-panel" id="left">
+            <div class="file-header" id="fileHdr">
+                <div class="file-icon"></div>
+                <span class="file-name">index.html</span>
+                <span class="file-tag" id="fileTag">on disk</span>
+            </div>
+
+            <div class="code-block" id="codeBlock"><span class="code-line" id="c0"><span class="t">&lt;!DOCTYPE
+                        html&gt;</span></span>
+                <span class="code-line" id="c1"><span class="t">&lt;html</span> <span class="a">lang</span>=<span
+                        class="s">"en"</span><span class="t">&gt;</span></span>
+                <span class="code-line" id="c2"> <span class="t">&lt;head&gt;</span></span>
+                <span class="code-line" id="c3"> <span class="t">&lt;title&gt;</span><span class="x">My Page</span><span
+                        class="t">&lt;/title&gt;</span></span>
+                <span class="code-line" id="c4"> <span class="t">&lt;/head&gt;</span></span>
+                <span class="code-line" id="c5"> <span class="t">&lt;body&gt;</span></span>
+                <span class="code-line" id="c6"> <span class="t">&lt;div</span> <span class="a">id</span>=<span
+                        class="s">"app"</span><span class="t">&gt;</span></span>
+                <span class="code-line" id="c7"> <span class="t">&lt;h1&gt;</span><span class="x">Hello
+                        World</span><span class="t">&lt;/h1&gt;</span></span>
+                <span class="code-line" id="c8"> <span class="t">&lt;p&gt;</span><span class="x">Welcome to my
+                        site</span><span class="t">&lt;/p&gt;</span></span>
+                <span class="code-line" id="c9"> <span class="t">&lt;ul&gt;</span></span>
+                <span class="code-line" id="c10"> <span class="t">&lt;li&gt;</span><span class="x">Item 1</span><span
+                        class="t">&lt;/li&gt;</span></span>
+                <span class="code-line" id="c11"> <span class="t">&lt;li&gt;</span><span class="x">Item 2</span><span
+                        class="t">&lt;/li&gt;</span></span>
+                <span class="code-line" id="c12"> <span class="t">&lt;/ul&gt;</span></span>
+                <span class="code-line" id="c13"> <span class="t">&lt;button&gt;</span><span class="x">Click
+                        me</span><span class="t">&lt;/button&gt;</span></span>
+                <span class="code-line" id="c14"> <span class="t">&lt;/div&gt;</span></span>
+                <span class="code-line" id="c15"> <span class="t">&lt;/body&gt;</span></span>
+                <span class="code-line" id="c16"><span class="t">&lt;/html&gt;</span></span>
+            </div>
+
+            <div class="browser-box" id="browser">
+                <div class="browser-bar">
+                    <div class="bd r"></div>
+                    <div class="bd y"></div>
+                    <div class="bd g"></div>
+                    <div class="browser-url">file:///index.html</div>
+                </div>
+                <div class="browser-content">
+                    <h1 id="bH1">Hello World</h1>
+                    <p>Welcome to my site</p>
+                    <ul>
+                        <li>Item 1</li>
+                        <li>Item 2</li>
+                    </ul>
+                    <button>Click me</button>
+                </div>
+            </div>
+
+            <div class="js-box" id="jsBox">
+                <div class="js-label">▸ JavaScript Console</div>
+                <div class="js-code">
+                    <div class="js-line" id="j1"><span class="kw">const</span> <span class="op">heading =</span> <span
+                            class="ob">document</span>.<span class="fn">querySelector</span>(<span
+                            class="s">'h1'</span>);</div>
+                    <div class="js-line" id="j2"><span class="op">heading.</span><span class="pr">textContent</span>
+                        <span class="op">=</span> <span class="s">'DOM Updated!'</span>;
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT — DOM TREE -->
+        <div class="right-panel" id="right">
+            <div class="dom-title" id="domTitle">DOCUMENT OBJECT MODEL (DOM)</div>
+
+            <!--
+      Carefully spaced tree layout — no overlaps.
+
+      Row 0  y=30:   document                cx=355
+      Row 1  y=88:   html                    cx=355
+      Row 2  y=150:  head(165)               body(530)
+      Row 3  y=212:  title(165)              div#app(530)
+      Row 3t y=268:  "My Page"(165)
+      Row 4  y=290:  h1(280)  p(390)  ul(500)  button(630)
+      Row 4t y=350:  "Hello.."(280) "Welcome.."(390)  "Click me"(630)
+      Row 5  y=370:                  li(460)  li(545)
+      Row 5t y=430:                  "Item 1"(460) "Item 2"(545)
+
+      But text nodes at row4t and element nodes at row5 are at same y.
+      Fix: stagger — text nodes for h1/p/button go to y=355,
+           li nodes go to y=370,
+           li text nodes go to y=435.
+      Actually let's just give more vertical space.
+
+      FINAL LAYOUT:
+      Row 0  y=28:   document         cx=355
+      Row 1  y=82:   html             cx=355
+      Row 2  y=140:  head(155)        body(530)
+      Row 3  y=200:  title(155)       div#app(530)
+      Row 3t y=255:  "My Page"(155)
+      Row 4  y=280:  h1(260) p(370) ul(480) button(620)
+      Row 5a y=345:  "Hello.."(260) "Welcome.."(370)  li(450) li(530) "Click me"(620)
+
+      ^ Still overlap between "Welcome.." and li nodes. The text rects are wide.
+      Let me space the 4 children further apart:
+
+      h1 at x=220, p at x=350, ul at x=480, button at x=630
+      Then text children:
+      "Hello.." at 220, "Welcome.." at 350 — these won't overlap with li at 445, 535
+
+      FINAL FINAL:
+      Row 0  y=28     document           cx=360    w=116
+      Row 1  y=84     html               cx=360    w=88
+      Row 2  y=142    head(150)  body(530)         w=88
+      Row 3  y=202    title(150) div#app(530)      w=88/112
+      Row 3t y=258    "My Page"(150)               w=100
+      Row 4  y=290    h1(200) p(340) ul(480) btn(630) w=76/64/68/96
+      Row 5  y=358    "Hello.."(200) "Welco.."(340) li(445) li(535) "Click me"(630)
+      Row 6  y=425    "Item 1"(445) "Item 2"(535)
+
+      Check widths for overlap:
+      "Hello.." rect: 200 ± 60 = 140–260
+      "Welcome.." rect: 340 ± 65 = 275–405
+      li: 445 ± 34 = 411–479
+      li: 535 ± 34 = 501–569
+      "Click me": 630 ± 48 = 582–678
+      ✓ No overlaps!
+
+      "Item 1": 445 ± 42 = 403–487
+      "Item 2": 535 ± 42 = 493–577
+      ✓ No overlaps!
+    -->
+
+            <svg class="tree-svg" viewBox="0 0 710 500">
+                <!-- EDGES -->
+                <!-- document → html -->
+                <line class="tree-edge" id="e1" x1="360" y1="44" x2="360" y2="72" />
+                <!-- html → head -->
+                <line class="tree-edge" id="e2" x1="360" y1="100" x2="150" y2="130" />
+                <!-- html → body -->
+                <line class="tree-edge" id="e3" x1="360" y1="100" x2="530" y2="130" />
+                <!-- head → title -->
+                <line class="tree-edge" id="e4" x1="150" y1="158" x2="150" y2="190" />
+                <!-- title → "My Page" -->
+                <line class="tree-edge" id="e6" x1="150" y1="218" x2="150" y2="246" />
+                <!-- body → div -->
+                <line class="tree-edge" id="e5" x1="530" y1="158" x2="530" y2="190" />
+                <!-- div → h1 -->
+                <line class="tree-edge" id="e7" x1="530" y1="218" x2="200" y2="278" />
+                <!-- div → p -->
+                <line class="tree-edge" id="e8" x1="530" y1="218" x2="340" y2="278" />
+                <!-- div → ul -->
+                <line class="tree-edge" id="e9" x1="530" y1="218" x2="480" y2="278" />
+                <!-- div → button -->
+                <line class="tree-edge" id="e10" x1="530" y1="218" x2="630" y2="278" />
+                <!-- h1 → "Hello World" -->
+                <line class="tree-edge" id="e11" x1="200" y1="306" x2="200" y2="346" />
+                <!-- p → "Welcome to…" -->
+                <line class="tree-edge" id="e12" x1="340" y1="306" x2="340" y2="346" />
+                <!-- ul → li1 -->
+                <line class="tree-edge" id="e13" x1="480" y1="306" x2="445" y2="346" />
+                <!-- ul → li2 -->
+                <line class="tree-edge" id="e14" x1="480" y1="306" x2="535" y2="346" />
+                <!-- button → "Click me" -->
+                <line class="tree-edge" id="e15" x1="630" y1="306" x2="630" y2="346" />
+                <!-- li1 → "Item 1" -->
+                <line class="tree-edge" id="e16" x1="445" y1="374" x2="445" y2="413" />
+                <!-- li2 → "Item 2" -->
+                <line class="tree-edge" id="e17" x1="535" y1="374" x2="535" y2="413" />
+
+                <!-- NODES -->
+                <!-- Row 0: document -->
+                <g class="tree-node" id="nd">
+                    <rect x="302" y="16" width="116" height="28" />
+                    <text x="360" y="30">document</text>
+                </g>
+                <!-- Row 1: html -->
+                <g class="tree-node" id="nhtml">
+                    <rect x="316" y="72" width="88" height="28" />
+                    <text x="360" y="86">&lt;html&gt;</text>
+                </g>
+                <!-- Row 2: head -->
+                <g class="tree-node" id="nhead">
+                    <rect x="106" y="130" width="88" height="28" />
+                    <text x="150" y="144">&lt;head&gt;</text>
+                </g>
+                <!-- Row 2: body -->
+                <g class="tree-node" id="nbody">
+                    <rect x="486" y="130" width="88" height="28" />
+                    <text x="530" y="144">&lt;body&gt;</text>
+                </g>
+                <!-- Row 3: title -->
+                <g class="tree-node" id="ntitle">
+                    <rect x="106" y="190" width="88" height="28" />
+                    <text x="150" y="204">&lt;title&gt;</text>
+                </g>
+                <!-- Row 3: div#app -->
+                <g class="tree-node" id="ndiv">
+                    <rect x="474" y="190" width="112" height="28" />
+                    <text x="530" y="204">&lt;div#app&gt;</text>
+                </g>
+                <!-- Row 3t: "My Page" -->
+                <g class="tree-node" id="ntitletxt">
+                    <rect x="100" y="246" width="100" height="22" style="fill:#0d1117;stroke:#21262d" />
+                    <text x="150" y="257" class="tv">"My Page"</text>
+                </g>
+                <!-- Row 4: h1 -->
+                <g class="tree-node" id="nh1">
+                    <rect x="162" y="278" width="76" height="28" />
+                    <text x="200" y="292">&lt;h1&gt;</text>
+                </g>
+                <!-- Row 4: p -->
+                <g class="tree-node" id="np">
+                    <rect x="308" y="278" width="64" height="28" />
+                    <text x="340" y="292">&lt;p&gt;</text>
+                </g>
+                <!-- Row 4: ul -->
+                <g class="tree-node" id="nul">
+                    <rect x="446" y="278" width="68" height="28" />
+                    <text x="480" y="292">&lt;ul&gt;</text>
+                </g>
+                <!-- Row 4: button -->
+                <g class="tree-node" id="nbtn">
+                    <rect x="582" y="278" width="96" height="28" />
+                    <text x="630" y="292">&lt;button&gt;</text>
+                </g>
+                <!-- Row 5: "Hello World" -->
+                <g class="tree-node" id="nh1txt">
+                    <rect x="138" y="346" width="124" height="22" style="fill:#0d1117;stroke:#21262d" />
+                    <text x="200" y="357" class="tv" id="domH1Txt">"Hello World"</text>
+                </g>
+                <!-- Row 5: "Welcome to…" -->
+                <g class="tree-node" id="nptxt">
+                    <rect x="275" y="346" width="130" height="22" style="fill:#0d1117;stroke:#21262d" />
+                    <text x="340" y="357" class="tv">"Welcome to…"</text>
+                </g>
+                <!-- Row 5: li -->
+                <g class="tree-node" id="nli1">
+                    <rect x="411" y="346" width="68" height="28" />
+                    <text x="445" y="360">&lt;li&gt;</text>
+                </g>
+                <!-- Row 5: li -->
+                <g class="tree-node" id="nli2">
+                    <rect x="501" y="346" width="68" height="28" />
+                    <text x="535" y="360">&lt;li&gt;</text>
+                </g>
+                <!-- Row 5: "Click me" -->
+                <g class="tree-node" id="nbtntxt">
+                    <rect x="582" y="346" width="96" height="22" style="fill:#0d1117;stroke:#21262d" />
+                    <text x="630" y="357" class="tv">"Click me"</text>
+                </g>
+                <!-- Row 6: "Item 1" -->
+                <g class="tree-node" id="nli1txt">
+                    <rect x="403" y="413" width="84" height="22" style="fill:#0d1117;stroke:#21262d" />
+                    <text x="445" y="424" class="tv">"Item 1"</text>
+                </g>
+                <!-- Row 6: "Item 2" -->
+                <g class="tree-node" id="nli2txt">
+                    <rect x="493" y="413" width="84" height="22" style="fill:#0d1117;stroke:#21262d" />
+                    <text x="535" y="424" class="tv">"Item 2"</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Overlay: Intro -->
+        <div class="overlay" id="intro">
+            <h2>How Browsers Build the DOM</h2>
+            <p>From an HTML file on disk → to a live, interactive object tree in memory.</p>
+        </div>
+
+        <!-- Overlay: Takeaway -->
+        <div class="overlay" id="takeaway">
+            <div class="takeaway-box">
+                <div class="takeaway-line"><span class="ho">HTML</span> is the blueprint.</div>
+                <div class="takeaway-line"><span class="hb">DOM</span> is the live object tree in memory.</div>
+                <div class="takeaway-line"><span class="hg">JavaScript</span> talks to the DOM, not the HTML file.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="ctrl-btn" id="btnBack" disabled>← Back</button>
+        <button class="ctrl-btn primary" id="btnNext">Next →</button>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        const show = el => { if (typeof el === 'string') el = $(el); el?.classList.add('show'); };
+        const hide = el => { if (typeof el === 'string') el = $(el); el?.classList.remove('show'); };
+        const hl = id => $(id)?.classList.add('hl');
+        const vis = id => $(id)?.classList.add('vis');
+        const hlNode = id => $(id)?.classList.add('highlight');
+
+        const cLines = [];
+        for (let i = 0; i <= 16; i++) cLines.push('c' + i);
+
+        const allNodes = ['nd', 'nhtml', 'nhead', 'nbody', 'ntitle', 'ntitletxt', 'ndiv',
+            'nh1', 'np', 'nul', 'nbtn', 'nh1txt', 'nptxt', 'nli1', 'nli2', 'nbtntxt', 'nli1txt', 'nli2txt'];
+
+        const allEdges = [];
+        for (let i = 1; i <= 17; i++) allEdges.push('e' + i);
+
+        function resetAll() {
+            ['left', 'right', 'divider', 'parseTag', 'intro', 'takeaway', 'domTitle', 'browser', 'jsBox'].forEach(hide);
+            cLines.forEach(id => { const el = $(id); el.classList.remove('hl', 'vis'); });
+            allNodes.forEach(id => { const el = $(id); el.classList.remove('show', 'highlight'); });
+            allEdges.forEach(id => hide(id));
+            ['j1', 'j2'].forEach(id => $(id).classList.remove('hl'));
+
+            $('bH1').textContent = 'Hello World';
+            $('bH1').classList.remove('flash');
+            $('domH1Txt').textContent = '"Hello World"';
+            $('fileTag').textContent = 'on disk';
+            $('fileTag').classList.remove('green');
+            $('codeBlock').style.display = '';
+            $('fileHdr').style.display = '';
+        }
+
+        function showNE(nodes, edges) {
+            nodes.forEach(show);
+            edges.forEach(show);
+        }
+
+        const TOTAL = 12;
+        let cur = -1;
+
+        for (let i = 0; i < TOTAL; i++) {
+            const d = document.createElement('div');
+            d.className = 'step-dot'; d.dataset.i = i;
+            $('dots').appendChild(d);
+        }
+        function updateDots() {
+            document.querySelectorAll('.step-dot').forEach(d => {
+                const i = +d.dataset.i;
+                d.classList.toggle('active', i === cur);
+                d.classList.toggle('done', i < cur);
+            });
+        }
+
+        const steps = [
+            // 0 — Intro
+            () => { show('intro'); },
+
+            // 1 — Show HTML file
+            () => {
+                show('left');
+                cLines.forEach(vis);
+            },
+
+            // 2 — Browser opens
+            () => {
+                show('left');
+                cLines.forEach(vis);
+                show('browser');
+            },
+
+            // 3 — Parse: document, html, head, title, "My Page"
+            () => {
+                show('left'); show('right'); show('divider'); show('parseTag');
+                ['c0', 'c1', 'c2', 'c3', 'c4'].forEach(hl);
+                showNE(
+                    ['nd', 'nhtml', 'nhead', 'ntitle', 'ntitletxt'],
+                    ['e1', 'e2', 'e4', 'e6']
+                );
+            },
+
+            // 4 — Parse: body, div#app
+            () => {
+                show('left'); show('right'); show('divider'); show('parseTag');
+                showNE(
+                    ['nd', 'nhtml', 'nhead', 'ntitle', 'ntitletxt'],
+                    ['e1', 'e2', 'e4', 'e6']
+                );
+                ['c5', 'c6'].forEach(hl);
+                showNE(
+                    ['nbody', 'ndiv'],
+                    ['e3', 'e5']
+                );
+            },
+
+            // 5 — Parse: h1, p
+            () => {
+                show('left'); show('right'); show('divider'); show('parseTag');
+                showNE(
+                    ['nd', 'nhtml', 'nhead', 'ntitle', 'ntitletxt', 'nbody', 'ndiv'],
+                    ['e1', 'e2', 'e3', 'e4', 'e5', 'e6']
+                );
+                ['c7', 'c8'].forEach(hl);
+                showNE(
+                    ['nh1', 'np', 'nh1txt', 'nptxt'],
+                    ['e7', 'e8', 'e11', 'e12']
+                );
+            },
+
+            // 6 — Parse: ul > li li, button
+            () => {
+                show('left'); show('right'); show('divider'); show('parseTag');
+                showNE(
+                    ['nd', 'nhtml', 'nhead', 'ntitle', 'ntitletxt', 'nbody', 'ndiv', 'nh1', 'np', 'nh1txt', 'nptxt'],
+                    ['e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8', 'e11', 'e12']
+                );
+                ['c9', 'c10', 'c11', 'c12', 'c13'].forEach(hl);
+                showNE(
+                    ['nul', 'nbtn', 'nli1', 'nli2', 'nbtntxt', 'nli1txt', 'nli2txt'],
+                    ['e9', 'e10', 'e13', 'e14', 'e15', 'e16', 'e17']
+                );
+            },
+
+            // 7 — Full tree labeled
+            () => {
+                show('left'); show('right'); show('divider'); show('domTitle');
+                cLines.forEach(vis);
+                show('browser');
+                allNodes.forEach(show);
+                allEdges.forEach(show);
+            },
+
+            // 8 — JS querySelector
+            () => {
+                show('left'); show('right'); show('divider'); show('domTitle');
+                $('codeBlock').style.display = 'none';
+                $('fileHdr').style.display = 'none';
+                show('browser');
+                show('jsBox');
+                hl('j1');
+                allNodes.forEach(show);
+                allEdges.forEach(show);
+                hlNode('nh1'); hlNode('nh1txt');
+            },
+
+            // 9 — JS changes text
+            () => {
+                show('left'); show('right'); show('divider'); show('domTitle');
+                $('codeBlock').style.display = 'none';
+                $('fileHdr').style.display = 'none';
+                show('browser');
+                show('jsBox');
+                hl('j1'); hl('j2');
+                allNodes.forEach(show);
+                allEdges.forEach(show);
+                hlNode('nh1'); hlNode('nh1txt');
+                $('domH1Txt').textContent = '"DOM Updated!"';
+                $('bH1').textContent = 'DOM Updated!';
+                $('bH1').classList.add('flash');
+            },
+
+            // 10 — HTML unchanged
+            () => {
+                show('left'); show('right'); show('divider'); show('domTitle');
+                $('codeBlock').style.display = '';
+                $('fileHdr').style.display = '';
+                cLines.forEach(vis);
+                show('browser');
+                $('fileTag').textContent = '✓ unchanged';
+                $('fileTag').classList.add('green');
+                allNodes.forEach(show);
+                allEdges.forEach(show);
+                hlNode('nh1'); hlNode('nh1txt');
+                $('domH1Txt').textContent = '"DOM Updated!"';
+                $('bH1').textContent = 'DOM Updated!';
+                $('bH1').classList.add('flash');
+            },
+
+            // 11 — Takeaway
+            () => { show('takeaway'); }
+        ];
+
+        function go(s) {
+            if (s < 0 || s >= TOTAL) return;
+            cur = s;
+            resetAll();
+            steps[s]();
+            updateDots();
+            $('btnBack').disabled = s === 0;
+            $('btnNext').disabled = s === TOTAL - 1;
+            $('btnNext').textContent = s === TOTAL - 1 ? 'Done ✓' : 'Next →';
+        }
+
+        $('btnNext').addEventListener('click', () => go(cur + 1));
+        $('btnBack').addEventListener('click', () => go(cur - 1));
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); go(cur - 1); }
+        });
+
+        go(0);
+    </script>
+</body>
+
+</html>

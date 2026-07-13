@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>createElement & appendChild — Visual Explainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #0a0c14;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            overflow-x: hidden;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+            margin-top: 8px
+        }
+
+        .header h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #c4b5fd;
+            letter-spacing: .02em
+        }
+
+        .header p {
+            font-size: .75rem;
+            color: #64748b;
+            margin-top: 4px
+        }
+
+        /* ── PROGRESS ── */
+        .progress-bar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .prog-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1e2130;
+            border: 2px solid #2d3148;
+            transition: all .35s;
+        }
+
+        .prog-dot.done {
+            background: #4ade80;
+            border-color: #4ade80
+        }
+
+        .prog-dot.active {
+            border-color: #818cf8;
+            background: #6366f1;
+            transform: scale(1.35);
+            box-shadow: 0 0 8px rgba(99, 102, 241, .5)
+        }
+
+        .prog-label {
+            font-size: .72rem;
+            color: #64748b;
+            font-weight: 600;
+            margin-left: 8px
+        }
+
+        /* ── STAGE ── */
+        .stage {
+            width: 100%;
+            max-width: 1060px;
+            background: #12141f;
+            border-radius: 18px;
+            border: 1px solid #1e2130;
+            box-shadow: 0 32px 80px rgba(0, 0, 0, .6);
+            overflow: hidden;
+        }
+
+        /* ── SPLIT PANELS ── */
+        .panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 420px;
+        }
+
+        .panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+        }
+
+        .panel-left {
+            border-right: 1px solid #1e2130
+        }
+
+        .panel-label {
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .panel-label.mem-label {
+            color: #f59e0b
+        }
+
+        .panel-label.dom-label {
+            color: #4ade80
+        }
+
+        /* ── MEMORY ZONE ── */
+        .memory-zone {
+            flex: 1;
+            background: #0e101a;
+            border: 2px dashed #1e2130;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: border-color .4s;
+            position: relative;
+        }
+
+        .memory-zone.glow {
+            border-color: #f59e0b
+        }
+
+        .mem-empty {
+            color: #334155;
+            font-size: .82rem;
+            text-align: center;
+            font-style: italic
+        }
+
+        /* floating object */
+        .float-obj {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            background: #1a1c2e;
+            border: 2px solid #6366f1;
+            border-radius: 10px;
+            padding: 14px 20px;
+            width: 100%;
+            max-width: 210px;
+            box-shadow: 0 0 28px rgba(99, 102, 241, .18);
+            position: relative;
+            animation: popIn .4s ease-out;
+        }
+
+        .float-obj.show {
+            display: flex
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(.7)
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1)
+            }
+        }
+
+        .float-obj.fading {
+            animation: fadeAway .5s ease-in forwards
+        }
+
+        @keyframes fadeAway {
+            to {
+                opacity: 0;
+                transform: translateX(40px) scale(.85)
+            }
+        }
+
+        .fo-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .78rem;
+            color: #818cf8;
+            font-weight: 600
+        }
+
+        .fo-text {
+            font-size: .78rem;
+            color: #f1f5f9;
+            font-weight: 500;
+            display: none
+        }
+
+        .fo-text.show {
+            display: block
+        }
+
+        .fo-badge {
+            font-size: .6rem;
+            background: rgba(239, 68, 68, .12);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, .25);
+            border-radius: 16px;
+            padding: 2px 10px;
+            display: none;
+        }
+
+        .fo-badge.show {
+            display: inline-block
+        }
+
+        .fo-badge.connected {
+            background: rgba(74, 222, 128, .12);
+            color: #4ade80;
+            border-color: rgba(74, 222, 128, .25)
+        }
+
+        /* ── DOM TREE ── */
+        .dom-tree-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .dom-tree {
+            background: #0e101a;
+            border-radius: 12px;
+            border: 1px solid #1e2130;
+            padding: 14px 18px;
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .76rem;
+            line-height: 1.8;
+            color: #64748b;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dom-node {
+            transition: all .35s;
+            white-space: nowrap;
+        }
+
+        .dom-node.green {
+            color: #4ade80
+        }
+
+        .dom-node.highlight {
+            color: #fbbf24;
+            text-shadow: 0 0 12px rgba(251, 191, 36, .4)
+        }
+
+        .dom-node .new-node {
+            display: none;
+            animation: slideDown .5s ease-out;
+        }
+
+        .dom-node .new-node.show {
+            display: block
+        }
+
+        @keyframes slideDown {
+            0% {
+                opacity: 0;
+                transform: translateY(-8px)
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* ── RENDERED PAGE ── */
+        .page-section {
+            border-top: 1px solid #1e2130;
+            padding: 14px 20px;
+        }
+
+        .page-section .ps-label {
+            font-size: .6rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #475569;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .rendered-page {
+            background: #f8fafc;
+            color: #0f172a;
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-family: Georgia, 'Times New Roman', serif;
+            transition: box-shadow .4s;
+        }
+
+        .rendered-page.flash {
+            box-shadow: 0 0 0 3px #4ade80, 0 0 20px rgba(74, 222, 128, .3)
+        }
+
+        .rp-heading {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1e293b
+        }
+
+        .rp-list {
+            list-style: disc;
+            padding-left: 22px;
+            font-size: .88rem;
+            color: #334155;
+            line-height: 1.7
+        }
+
+        .rp-list li {
+            transition: all .35s
+        }
+
+        .rp-list li.new-item {
+            animation: slideDown .5s ease-out;
+            color: #15803d;
+            font-weight: 600
+        }
+
+        .rp-list li.new-item-2 {
+            animation: slideDown .5s ease-out;
+            color: #15803d;
+            font-weight: 600
+        }
+
+        /* ── CODE PANEL ── */
+        .code-section {
+            border-top: 1px solid #1e2130;
+            background: #0e101a;
+            padding: 14px 20px;
+        }
+
+        .code-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .8rem;
+            padding: 5px 12px;
+            border-radius: 6px;
+            transition: all .3s;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            line-height: 1.6;
+            border-left: 3px solid transparent;
+        }
+
+        .code-line.active {
+            background: rgba(99, 102, 241, .08);
+            color: #e2e8f0;
+            border-left-color: #6366f1;
+        }
+
+        .code-line.done {
+            color: #4b5563
+        }
+
+        .kw {
+            color: #c084fc
+        }
+
+        .fn {
+            color: #60a5fa
+        }
+
+        .str {
+            color: #4ade80
+        }
+
+        .prop {
+            color: #fb923c
+        }
+
+        .cmt {
+            color: #475569;
+            font-style: italic
+        }
+
+        /* ── NARRATIVE ── */
+        .narrative {
+            border-top: 1px solid #1e2130;
+            padding: 16px 24px;
+            background: #12141f;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            min-height: 74px;
+        }
+
+        .narr-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            margin-top: 2px
+        }
+
+        .narr-text {
+            font-size: .88rem;
+            line-height: 1.65;
+            color: #cbd5e1;
+            transition: opacity .3s;
+        }
+
+        .hl {
+            color: #a5b4fc;
+            font-weight: 600
+        }
+
+        .hl-g {
+            color: #4ade80;
+            font-weight: 600
+        }
+
+        .hl-y {
+            color: #fbbf24;
+            font-weight: 600
+        }
+
+        .hl-r {
+            color: #f87171;
+            font-weight: 600
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .82rem;
+            background: rgba(99, 102, 241, .12);
+            color: #a5b4fc;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        /* ── QUESTION BOX ── */
+        .question-box {
+            display: none;
+            background: rgba(251, 191, 36, .06);
+            border: 1px solid rgba(251, 191, 36, .2);
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin: 8px 0;
+            text-align: center;
+        }
+
+        .question-box.show {
+            display: block;
+            animation: popIn .4s ease-out
+        }
+
+        .qb-q {
+            font-size: .92rem;
+            color: #fbbf24;
+            font-weight: 600;
+            margin-bottom: 6px
+        }
+
+        .qb-a {
+            font-size: .85rem;
+            color: #f87171;
+            font-weight: 700
+        }
+
+        .qb-reason {
+            font-size: .78rem;
+            color: #94a3b8;
+            margin-top: 4px
+        }
+
+        /* ── FLOW ARROWS ── */
+        .flow-diagram {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 10px 0;
+        }
+
+        .flow-diagram.show {
+            display: flex;
+            animation: popIn .5s ease-out
+        }
+
+        .flow-box {
+            border-radius: 8px;
+            padding: 8px 20px;
+            font-size: .78rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 220px;
+        }
+
+        .flow-mem {
+            background: rgba(245, 158, 11, .1);
+            border: 1px solid rgba(245, 158, 11, .3);
+            color: #fbbf24
+        }
+
+        .flow-dom {
+            background: rgba(74, 222, 128, .1);
+            border: 1px solid rgba(74, 222, 128, .3);
+            color: #4ade80
+        }
+
+        .flow-vis {
+            background: rgba(96, 165, 250, .1);
+            border: 1px solid rgba(96, 165, 250, .3);
+            color: #60a5fa
+        }
+
+        .flow-arrow {
+            color: #475569;
+            font-size: 1rem
+        }
+
+        /* ── FINAL SUMMARY ── */
+        .final-summary {
+            display: none;
+            padding: 24px;
+            background: #0e101a;
+            border-top: 1px solid #1e2130;
+        }
+
+        .final-summary.show {
+            display: block;
+            animation: popIn .5s ease-out
+        }
+
+        .summary-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+
+        .sf-step {
+            border-radius: 10px;
+            padding: 12px 28px;
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .sf-step .sf-fn {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .88rem;
+            font-weight: 700
+        }
+
+        .sf-step .sf-desc {
+            font-size: .76rem;
+            margin-top: 4px
+        }
+
+        .sf-mem {
+            background: rgba(245, 158, 11, .08);
+            border: 1px solid rgba(245, 158, 11, .2)
+        }
+
+        .sf-mem .sf-fn {
+            color: #fbbf24
+        }
+
+        .sf-mem .sf-desc {
+            color: #94a3b8
+        }
+
+        .sf-append {
+            background: rgba(74, 222, 128, .08);
+            border: 1px solid rgba(74, 222, 128, .2)
+        }
+
+        .sf-append .sf-fn {
+            color: #4ade80
+        }
+
+        .sf-append .sf-desc {
+            color: #94a3b8
+        }
+
+        .sf-render {
+            background: rgba(96, 165, 250, .08);
+            border: 1px solid rgba(96, 165, 250, .2)
+        }
+
+        .sf-render .sf-fn {
+            color: #60a5fa
+        }
+
+        .sf-render .sf-desc {
+            color: #94a3b8
+        }
+
+        .sf-arrow {
+            color: #334155;
+            font-size: 1rem
+        }
+
+        .final-quote {
+            text-align: center;
+            background: rgba(99, 102, 241, .06);
+            border: 1px solid rgba(99, 102, 241, .15);
+            border-radius: 12px;
+            padding: 18px 24px;
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+        .final-quote p {
+            font-size: .88rem;
+            line-height: 1.7;
+            color: #cbd5e1
+        }
+
+        .final-quote p strong {
+            color: #a5b4fc
+        }
+
+        /* ── CONTROLS ── */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 28px;
+            border-radius: 10px;
+            border: 1px solid #2d3148;
+            background: #1e2130;
+            color: #e2e8f0;
+            font-size: .88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            user-select: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #252839;
+            border-color: #6366f1;
+            color: #a5b4fc;
+            transform: translateY(-1px)
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0)
+        }
+
+        .btn:disabled {
+            opacity: .3;
+            cursor: not-allowed
+        }
+
+        .btn.primary {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: #fff
+        }
+
+        .btn.primary:hover:not(:disabled) {
+            background: #818cf8;
+            border-color: #818cf8
+        }
+
+        .step-info {
+            font-size: .78rem;
+            color: #475569;
+            font-weight: 600;
+            min-width: 80px;
+            text-align: center
+        }
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:700px) {
+            .panels {
+                grid-template-columns: 1fr;
+                min-height: auto
+            }
+
+            .panel-left {
+                border-right: none;
+                border-bottom: 1px solid #1e2130
+            }
+
+            .code-line {
+                font-size: .7rem
+            }
+
+            .summary-flow {
+                max-width: 100%
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>How createElement() & appendChild() Work</h1>
+        <p>A visual explainer for absolute beginners</p>
+    </div>
+
+    <div class="progress-bar" id="progressBar"></div>
+
+    <div class="stage" id="stage">
+
+        <!-- ── SPLIT PANELS ── -->
+        <div class="panels">
+            <!-- LEFT: Memory -->
+            <div class="panel panel-left">
+                <div class="panel-label mem-label">🧠 In Memory (JavaScript)</div>
+                <div class="memory-zone" id="memZone">
+                    <p class="mem-empty" id="memEmpty">No JS objects yet</p>
+
+                    <!-- Float Object 1 -->
+                    <div class="float-obj" id="float1">
+                        <span class="fo-tag">&lt;li&gt;&lt;/li&gt;</span>
+                        <span class="fo-text" id="float1Text">"Eggs"</span>
+                        <span class="fo-badge" id="float1Badge">Not connected to DOM</span>
+                    </div>
+
+                    <!-- Float Object 2 -->
+                    <div class="float-obj" id="float2">
+                        <span class="fo-tag">&lt;li&gt;&lt;/li&gt;</span>
+                        <span class="fo-text" id="float2Text">"Butter"</span>
+                        <span class="fo-badge" id="float2Badge">Not connected to DOM</span>
+                    </div>
+
+                    <!-- Question Box -->
+                    <div class="question-box" id="questionBox">
+                        <div class="qb-q">🤔 Will "Butter" appear on the page?</div>
+                        <div class="qb-a">No.</div>
+                        <div class="qb-reason">It exists only in JavaScript memory.</div>
+                    </div>
+
+                    <!-- Flow diagram (step 5) -->
+                    <div class="flow-diagram" id="flowDiag">
+                        <div class="flow-box flow-mem">JavaScript Memory</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-box flow-dom">DOM Tree</div>
+                        <div class="flow-arrow">↓</div>
+                        <div class="flow-box flow-vis">Rendered Webpage</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: DOM + Page -->
+            <div class="panel">
+                <div class="panel-label dom-label">🌳 Live DOM Tree</div>
+                <div class="dom-tree-area">
+                    <div class="dom-tree" id="domTree">
+                        <div class="dom-node green">document</div>
+                        <div class="dom-node green">&nbsp;&nbsp;└── body</div>
+                        <div class="dom-node green">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── h1 <span
+                                style="color:#94a3b8">"Shopping List"</span></div>
+                        <div class="dom-node green">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── ul</div>
+                        <div class="dom-node green">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── li <span
+                                style="color:#94a3b8">"Milk"</span></div>
+                        <div class="dom-node green">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── li <span
+                                style="color:#94a3b8">"Bread"</span></div>
+                        <div class="dom-node new-node" id="domEggs">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── li <span
+                                style="color:#94a3b8">"Eggs"</span></div>
+                        <div class="dom-node new-node" id="domButter">
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── li <span
+                                style="color:#94a3b8">"Butter"</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RENDERED PAGE ── -->
+        <div class="page-section">
+            <div class="ps-label">👁️ What the user sees (rendered page)</div>
+            <div class="rendered-page" id="renderedPage">
+                <div class="rp-heading">Shopping List</div>
+                <ul class="rp-list" id="rpList">
+                    <li>Milk</li>
+                    <li>Bread</li>
+                    <li class="new-item" id="rpEggs" style="display:none">Eggs</li>
+                    <li class="new-item-2" id="rpButter" style="display:none">Butter</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ── CODE SECTION ── -->
+        <div class="code-section" id="codeSection">
+            <div class="code-line" id="c1">
+                <span><span class="kw">const</span> item = <span class="fn">document</span>.<span
+                        class="fn">createElement</span>(<span class="str">"li"</span>);</span>
+            </div>
+            <div class="code-line" id="c2">
+                <span>item.<span class="prop">innerText</span> = <span class="str">"Eggs"</span>;</span>
+            </div>
+            <div class="code-line" id="c3">
+                <span><span class="fn">document</span>.<span class="fn">querySelector</span>(<span
+                        class="str">"ul"</span>).<span class="fn">appendChild</span>(item);</span>
+            </div>
+            <div class="code-line" id="c4" style="margin-top:10px">
+                <span><span class="kw">const</span> another = <span class="fn">document</span>.<span
+                        class="fn">createElement</span>(<span class="str">"li"</span>);</span>
+            </div>
+            <div class="code-line" id="c5">
+                <span>another.<span class="prop">innerText</span> = <span class="str">"Butter"</span>;</span>
+            </div>
+            <div class="code-line" id="c6">
+                <span><span class="cmt">// Not appended yet...</span></span>
+            </div>
+            <div class="code-line" id="c7">
+                <span><span class="fn">document</span>.<span class="fn">querySelector</span>(<span
+                        class="str">"ul"</span>).<span class="fn">appendChild</span>(another);</span>
+            </div>
+        </div>
+
+        <!-- ── NARRATIVE ── -->
+        <div class="narrative">
+            <span class="narr-icon" id="narrIcon">📄</span>
+            <div class="narr-text" id="narrText">Welcome! Let's learn how JavaScript adds elements to a webpage.</div>
+        </div>
+
+        <!-- ── FINAL SUMMARY ── -->
+        <div class="final-summary" id="finalSummary">
+            <div class="summary-flow">
+                <div class="sf-step sf-mem">
+                    <div class="sf-fn">createElement()</div>
+                    <div class="sf-desc">Creates a DOM element object in JavaScript memory. <strong>NOT
+                            visible.</strong></div>
+                </div>
+                <div class="sf-arrow">↓</div>
+                <div class="sf-step sf-append">
+                    <div class="sf-fn">appendChild()</div>
+                    <div class="sf-desc">Attaches it to the DOM tree.</div>
+                </div>
+                <div class="sf-arrow">↓</div>
+                <div class="sf-step sf-render">
+                    <div class="sf-fn">Browser re-renders</div>
+                    <div class="sf-desc">Element becomes visible on the webpage.</div>
+                </div>
+            </div>
+            <div class="final-quote">
+                <p><strong>JavaScript does NOT draw elements on the screen.</strong><br>
+                    JavaScript modifies the <strong>DOM</strong>.<br>
+                    The browser renders whatever exists inside the DOM.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── CONTROLS ── -->
+    <div class="controls">
+        <button class="btn" id="prevBtn" onclick="go(-1)">← Back</button>
+        <div class="step-info" id="stepInfo">1 / 9</div>
+        <button class="btn primary" id="nextBtn" onclick="go(1)">Next →</button>
+    </div>
+
+    <script>
+        const TOTAL_STEPS = 9;
+        let step = 1;
+
+        /* ── helpers ── */
+        const $ = id => document.getElementById(id);
+        const cl = (id, cls, on) => $(id)?.classList.toggle(cls, on);
+
+        function setCodeStates(activeArr, doneArr) {
+            for (let i = 1; i <= 7; i++) {
+                const el = $('c' + i);
+                el.classList.remove('active', 'done');
+                el.style.display = '';
+            }
+            doneArr.forEach(i => $('c' + i).classList.add('done'));
+            activeArr.forEach(i => $('c' + i).classList.add('active'));
+        }
+
+        function hideAllFloats() {
+            cl('float1', 'show', false); cl('float1', 'fading', false);
+            cl('float1Text', 'show', false); cl('float1Badge', 'show', false);
+            cl('float2', 'show', false); cl('float2', 'fading', false);
+            cl('float2Text', 'show', false); cl('float2Badge', 'show', false);
+            cl('questionBox', 'show', false);
+            cl('flowDiag', 'show', false);
+        }
+
+        function resetDom() {
+            cl('domEggs', 'show', false); cl('domEggs', 'highlight', false);
+            cl('domButter', 'show', false); cl('domButter', 'highlight', false);
+        }
+
+        function resetPage() {
+            $('rpEggs').style.display = 'none';
+            $('rpButter').style.display = 'none';
+            cl('renderedPage', 'flash', false);
+        }
+
+        function renderStep(n) {
+            /* reset everything */
+            hideAllFloats();
+            resetDom();
+            resetPage();
+            cl('memZone', 'glow', false);
+            cl('finalSummary', 'show', false);
+            $('codeSection').style.display = '';
+            $('memEmpty').style.display = '';
+
+            const show = (...ids) => ids.forEach(id => cl(id, 'show', true));
+
+            switch (n) {
+                case 1: /* initial page */
+                    setCodeStates([], []);
+                    $('narrIcon').textContent = '📄';
+                    $('narrText').innerHTML = `Here's a simple webpage with a <span class="hl">Shopping List</span> containing two items. The DOM tree on the right shows every element — all <span class="hl-g">green</span> because they are part of the live DOM.`;
+                    break;
+
+                case 2: /* createElement */
+                    setCodeStates([1], []);
+                    cl('memZone', 'glow', true);
+                    $('memEmpty').style.display = 'none';
+                    show('float1', 'float1Badge');
+                    $('narrIcon').textContent = '⚡';
+                    $('narrText').innerHTML = `<code>document.createElement("li")</code> runs. A brand-new <span class="hl">&lt;li&gt;</span> object appears in JavaScript <span class="hl-y">memory</span> — but the DOM tree and the webpage are <strong>completely unchanged</strong>.<br><em>"Created, but not attached."</em>`;
+                    break;
+
+                case 3: /* innerText */
+                    setCodeStates([2], [1]);
+                    cl('memZone', 'glow', true);
+                    $('memEmpty').style.display = 'none';
+                    show('float1', 'float1Badge', 'float1Text');
+                    $('narrIcon').textContent = '✏️';
+                    $('narrText').innerHTML = `We set <code>item.innerText = "Eggs"</code>. The text appears inside the <span class="hl-y">in-memory</span> object. But look — the <span class="hl-g">DOM tree</span> is unchanged. The <span class="hl">rendered page</span> is unchanged.<br><em>"The object changed. The page did not."</em>`;
+                    break;
+
+                case 4: /* appendChild (Eggs) */
+                    setCodeStates([3], [1, 2]);
+                    $('memEmpty').style.display = 'none';
+                    /* float fades out */
+                    show('float1', 'float1Text');
+                    cl('float1Badge', 'show', true);
+                    $('float1Badge').textContent = '✓ Connected!';
+                    $('float1Badge').classList.add('connected');
+                    cl('float1', 'fading', true);
+                    /* DOM updates */
+                    show('domEggs'); cl('domEggs', 'highlight', true);
+                    /* Page updates */
+                    $('rpEggs').style.display = 'list-item';
+                    cl('renderedPage', 'flash', true);
+                    setTimeout(() => cl('renderedPage', 'flash', false), 1200);
+                    $('narrIcon').textContent = '🚀';
+                    $('narrText').innerHTML = `<code>appendChild(item)</code> fires! Three things happen simultaneously:<br>
+      1️⃣ The element <span class="hl-y">leaves memory</span><br>
+      2️⃣ A new node <span class="hl-g">grows</span> in the DOM tree<br>
+      3️⃣ The rendered page <span class="hl-g">instantly updates</span> — "Eggs" is now visible!`;
+                    break;
+
+                case 5: /* freeze — show arrows */
+                    setCodeStates([], [1, 2, 3]);
+                    $('memEmpty').style.display = 'none';
+                    show('flowDiag');
+                    show('domEggs');
+                    $('rpEggs').style.display = 'list-item';
+                    $('narrIcon').textContent = '🔗';
+                    $('narrText').innerHTML = `<span class="hl-g">Only elements connected to the DOM are rendered.</span><br>Memory → DOM → Visible Page. That's the pipeline.`;
+                    break;
+
+                case 6: /* createElement + innerText for Butter — NOT appended */
+                    setCodeStates([4, 5], [1, 2, 3]);
+                    $('c6').classList.add('active');
+                    cl('memZone', 'glow', true);
+                    $('memEmpty').style.display = 'none';
+                    show('float2', 'float2Text', 'float2Badge');
+                    show('domEggs');
+                    $('rpEggs').style.display = 'list-item';
+                    $('narrIcon').textContent = '🤔';
+                    $('narrText').innerHTML = `We create another element: <code>createElement("li")</code> and set its text to <span class="hl">"Butter"</span>. It's floating in memory. But this time, we <span class="hl-r">do NOT</span> call appendChild. Will Butter appear on the page?`;
+                    show('questionBox');
+                    break;
+
+                case 7: /* appendChild(another) — Butter */
+                    setCodeStates([7], [1, 2, 3, 4, 5, 6]);
+                    $('memEmpty').style.display = 'none';
+                    show('float2', 'float2Text');
+                    cl('float2Badge', 'show', true);
+                    $('float2Badge').textContent = '✓ Connected!';
+                    $('float2Badge').classList.add('connected');
+                    cl('float2', 'fading', true);
+                    show('domEggs', 'domButter');
+                    cl('domButter', 'highlight', true);
+                    $('rpEggs').style.display = 'list-item';
+                    $('rpButter').style.display = 'list-item';
+                    cl('renderedPage', 'flash', true);
+                    setTimeout(() => cl('renderedPage', 'flash', false), 1200);
+                    $('narrIcon').textContent = '✅';
+                    $('narrText').innerHTML = `Now <code>appendChild(another)</code> runs. The <span class="hl-y">Butter</span> element travels from memory → <span class="hl-g">DOM</span> → <span class="hl-g">visible page</span>. The list now shows all four items!`;
+                    break;
+
+                case 8: /* Final summary diagram */
+                    setCodeStates([], [1, 2, 3, 4, 5, 6, 7]);
+                    show('domEggs', 'domButter');
+                    $('rpEggs').style.display = 'list-item';
+                    $('rpButter').style.display = 'list-item';
+                    cl('finalSummary', 'show', true);
+                    $('narrIcon').textContent = '📋';
+                    $('narrText').innerHTML = `<span class="hl-g">Here's the complete picture.</span> createElement() builds the element. appendChild() plants it in the DOM. The browser then renders it on screen.`;
+                    break;
+
+                case 9: /* Final takeaway */
+                    setCodeStates([], [1, 2, 3, 4, 5, 6, 7]);
+                    show('domEggs', 'domButter');
+                    $('rpEggs').style.display = 'list-item';
+                    $('rpButter').style.display = 'list-item';
+                    cl('finalSummary', 'show', true);
+                    $('codeSection').style.display = 'none';
+                    $('narrIcon').textContent = '🎯';
+                    $('narrText').innerHTML = `<strong>Key takeaway:</strong> JavaScript does <span class="hl-r">NOT</span> draw elements on the screen. JavaScript modifies the <span class="hl-g">DOM</span>. The browser renders whatever exists inside the DOM. <span class="hl">createElement()</span> alone is never enough.`;
+                    break;
+            }
+        }
+
+        /* ── Progress dots ── */
+        function updateProgress(n) {
+            const bar = $('progressBar');
+            bar.innerHTML = '';
+            for (let i = 1; i <= TOTAL_STEPS; i++) {
+                const d = document.createElement('div');
+                d.className = 'prog-dot';
+                if (i < n) d.classList.add('done');
+                if (i === n) d.classList.add('active');
+                bar.appendChild(d);
+            }
+            const lbl = document.createElement('span');
+            lbl.className = 'prog-label';
+            lbl.textContent = `Step ${n} of ${TOTAL_STEPS}`;
+            bar.appendChild(lbl);
+        }
+
+        /* ── Navigation ── */
+        function go(dir) {
+            const next = step + dir;
+            if (next < 1 || next > TOTAL_STEPS) return;
+            step = next;
+            render();
+        }
+
+        function render() {
+            renderStep(step);
+            updateProgress(step);
+            $('prevBtn').disabled = (step === 1);
+            $('nextBtn').disabled = (step === TOTAL_STEPS);
+            $('stepInfo').textContent = `${step} / ${TOTAL_STEPS}`;
+        }
+
+        /* keyboard nav */
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+        });
+
+        /* init */
+        render();
+    </script>
+
+</body>
+
+</html>
