@@ -1,534 +1,565 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Full Stack Visualizations</title>
 
-    <style>
-      :root {
-        --bg: #0f172a;
-        --panel: #111827;
-        --panel-soft: #172033;
-        --card: #1a2436;
-        --border: rgba(255, 255, 255, 0.08);
-        --border-strong: rgba(125, 211, 252, 0.28);
-        --text: #e5e7eb;
-        --muted: #94a3b8;
-        --soft: #64748b;
-        --accent: #38bdf8;
-        --accent-soft: rgba(56, 189, 248, 0.12);
-        --green: #34d399;
-        --purple: #a78bfa;
-        --orange: #fb923c;
-        --radius-lg: 24px;
-        --radius-md: 16px;
-        --radius-sm: 12px;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Full Stack Visualizations</title>
 
-      * {
-        box-sizing: border-box;
-      }
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-soft: #172033;
+      --card: #1a2436;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(125, 211, 252, 0.28);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --soft: #64748b;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --green: #34d399;
+      --purple: #a78bfa;
+      --orange: #fb923c;
+      --radius-lg: 24px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
 
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      background:
+        radial-gradient(circle at top left,
+          rgba(56, 189, 248, 0.16),
+          transparent 32%),
+        radial-gradient(circle at top right,
+          rgba(167, 139, 250, 0.12),
+          transparent 34%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 48px 20px;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      margin-bottom: 34px;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(36px, 5vw, 58px);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.7;
+      max-width: 780px;
+    }
+
+    .modules {
+      display: grid;
+      gap: 22px;
+    }
+
+    details {
+      background: rgba(17, 24, 39, 0.86);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
+    }
+
+    details[open] {
+      border-color: var(--border-strong);
+    }
+
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 28px;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: center;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .module-title {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: -0.03em;
+    }
+
+    .module-desc {
+      margin: 0;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.5;
+    }
+
+    .module-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .badge {
+      background: var(--accent-soft);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .chevron {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.04);
+      transition: 0.2s ease;
+    }
+
+    details[open] .chevron {
+      transform: rotate(180deg);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .module-body {
+      border-top: 1px solid var(--border);
+      padding: 28px;
+    }
+
+    .class-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .class-card {
+      background: linear-gradient(180deg,
+          rgba(255, 255, 255, 0.045),
+          rgba(255, 255, 255, 0.025));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 22px;
+    }
+
+    .class-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .class-header h3 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .class-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15.5px;
+      line-height: 1.6;
+    }
+
+    .mini-badge {
+      background: rgba(255, 255, 255, 0.05);
+      color: #bae6fd;
+      border: 1px solid rgba(186, 230, 253, 0.16);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .visual-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .visual-link {
+      text-decoration: none;
+      color: var(--text);
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: var(--radius-sm);
+      padding: 14px 15px;
+      transition: 0.18s ease;
+    }
+
+    .visual-link:hover {
+      transform: translateY(-2px);
+      background: rgba(56, 189, 248, 0.1);
+      border-color: rgba(56, 189, 248, 0.34);
+    }
+
+    .visual-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
+
+    .visual-desc {
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height: 1.45;
+    }
+
+    .empty {
+      color: var(--soft);
+      margin: 0;
+      font-size: 15px;
+    }
+
+    @media (max-width: 760px) {
       body {
-        margin: 0;
-        font-family:
-          Inter,
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          sans-serif;
-        background:
-          radial-gradient(
-            circle at top left,
-            rgba(56, 189, 248, 0.16),
-            transparent 32%
-          ),
-          radial-gradient(
-            circle at top right,
-            rgba(167, 139, 250, 0.12),
-            transparent 34%
-          ),
-          var(--bg);
-        color: var(--text);
-        min-height: 100vh;
-        padding: 48px 20px;
+        padding: 30px 14px;
       }
 
-      .page {
-        max-width: 1180px;
-        margin: 0 auto;
-      }
-
-      .hero {
-        margin-bottom: 34px;
-      }
-
-      .eyebrow {
-        color: var(--accent);
-        font-size: 13px;
-        font-weight: 800;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        margin-bottom: 12px;
-      }
-
-      h1 {
-        margin: 0 0 14px;
-        font-size: clamp(36px, 5vw, 58px);
-        line-height: 1.05;
-        letter-spacing: -0.04em;
-      }
-
-      .subtitle {
-        margin: 0;
-        color: var(--muted);
-        font-size: 18px;
-        line-height: 1.7;
-        max-width: 780px;
-      }
-
-      .modules {
-        display: grid;
-        gap: 22px;
-      }
-
-      details {
-        background: rgba(17, 24, 39, 0.86);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-lg);
-        overflow: hidden;
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
-      }
-
-      details[open] {
-        border-color: var(--border-strong);
-      }
-
-      summary {
-        cursor: pointer;
-        list-style: none;
-        padding: 28px;
-        display: flex;
-        justify-content: space-between;
-        gap: 24px;
-        align-items: center;
-      }
-
-      summary::-webkit-details-marker {
-        display: none;
-      }
-
-      .module-title {
-        margin: 0 0 8px;
-        font-size: 30px;
-        letter-spacing: -0.03em;
-      }
-
-      .module-desc {
-        margin: 0;
-        color: var(--muted);
-        font-size: 17px;
-        line-height: 1.5;
+      summary,
+      .class-header {
+        flex-direction: column;
       }
 
       .module-actions {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-shrink: 0;
-      }
-
-      .badge {
-        background: var(--accent-soft);
-        color: #7dd3fc;
-        border: 1px solid rgba(56, 189, 248, 0.28);
-        padding: 8px 14px;
-        border-radius: 999px;
-        font-size: 14px;
-        font-weight: 800;
-        white-space: nowrap;
-      }
-
-      .chevron {
-        width: 34px;
-        height: 34px;
-        display: grid;
-        place-items: center;
-        border-radius: 50%;
-        color: var(--muted);
-        background: rgba(255, 255, 255, 0.04);
-        transition: 0.2s ease;
-      }
-
-      details[open] .chevron {
-        transform: rotate(180deg);
-        color: var(--accent);
-        background: var(--accent-soft);
-      }
-
-      .module-body {
-        border-top: 1px solid var(--border);
-        padding: 28px;
-      }
-
-      .class-list {
-        display: grid;
-        gap: 18px;
-      }
-
-      .class-card {
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.045),
-          rgba(255, 255, 255, 0.025)
-        );
-        border: 1px solid var(--border);
-        border-radius: var(--radius-md);
-        padding: 22px;
-      }
-
-      .class-header {
-        display: flex;
+        width: 100%;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 18px;
-        margin-bottom: 18px;
-      }
-
-      .class-header h3 {
-        margin: 0 0 8px;
-        font-size: 22px;
-        letter-spacing: -0.02em;
-      }
-
-      .class-header p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 15.5px;
-        line-height: 1.6;
-      }
-
-      .mini-badge {
-        background: rgba(255, 255, 255, 0.05);
-        color: #bae6fd;
-        border: 1px solid rgba(186, 230, 253, 0.16);
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 12.5px;
-        font-weight: 800;
-        white-space: nowrap;
       }
 
       .visual-list {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: 1fr;
       }
 
-      .visual-link {
-        text-decoration: none;
-        color: var(--text);
-        background: rgba(15, 23, 42, 0.72);
-        border: 1px solid rgba(255, 255, 255, 0.07);
-        border-radius: var(--radius-sm);
-        padding: 14px 15px;
-        transition: 0.18s ease;
+      .module-title {
+        font-size: 26px;
       }
+    }
+  </style>
+</head>
 
-      .visual-link:hover {
-        transform: translateY(-2px);
-        background: rgba(56, 189, 248, 0.1);
-        border-color: rgba(56, 189, 248, 0.34);
-      }
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Full Stack Learning Companion</div>
+      <h1>Full Stack Visualizations</h1>
+      <p class="subtitle">
+        A growing library of interactive visual explanations for HTML, CSS,
+        JavaScript, React, and MERN classes.
+      </p>
+    </section>
 
-      .visual-title {
-        font-size: 15px;
-        font-weight: 800;
-        margin-bottom: 5px;
-      }
-
-      .visual-desc {
-        color: var(--muted);
-        font-size: 13.5px;
-        line-height: 1.45;
-      }
-
-      .empty {
-        color: var(--soft);
-        margin: 0;
-        font-size: 15px;
-      }
-
-      @media (max-width: 760px) {
-        body {
-          padding: 30px 14px;
-        }
-
-        summary,
-        .class-header {
-          flex-direction: column;
-        }
-
-        .module-actions {
-          width: 100%;
-          justify-content: space-between;
-        }
-
-        .visual-list {
-          grid-template-columns: 1fr;
-        }
-
-        .module-title {
-          font-size: 26px;
-        }
-      }
-    </style>
-  </head>
-
-  <body>
-    <main class="page">
-      <section class="hero">
-        <div class="eyebrow">Full Stack Learning Companion</div>
-        <h1>Full Stack Visualizations</h1>
-        <p class="subtitle">
-          A growing library of interactive visual explanations for HTML, CSS,
-          JavaScript, React, and MERN classes.
-        </p>
-      </section>
-
-      <section class="modules">
-        <details open>
-          <summary>
-            <div>
-              <h2 class="module-title">HTML CSS</h2>
-              <p class="module-desc">
-                Web foundations, layout, responsive design, and UI debugging.
-              </p>
-            </div>
-
-            <div class="module-actions">
-              <span class="badge">8 classes</span>
-              <span class="chevron">⌄</span>
-            </div>
-          </summary>
-
-          <div class="module-body">
-            <div class="class-list">
-              <article class="class-card">
-                <div class="class-header">
-                  <div>
-                    <h3>Class 1: How the Web Works</h3>
-                    <p>
-                      Browser, HTML, DevTools, and page inspection fundamentals.
-                    </p>
-                  </div>
-                  <span class="mini-badge">1 visual</span>
-                </div>
-
-                <div class="visual-list">
-                  <a class="visual-link" href="./class 1/web-works.html">
-                    <div class="visual-title">How Web Works</div>
-                    <div class="visual-desc">
-                      How a browser requests, receives, and renders a page.
-                    </div>
-                  </a>
-                </div>
-              </article>
-
-              <article class="class-card">
-                <div class="class-header">
-                  <div>
-                    <h3>Class 2: Semantic HTML and Forms</h3>
-                    <p>Structure, meaning, inputs, labels, and form basics.</p>
-                  </div>
-                  <span class="mini-badge">2 visuals</span>
-                </div>
-
-                <div class="visual-list">
-                  <a
-                    class="visual-link"
-                    href="./html-css/class-02-semantic-tags.html"
-                  >
-                    <div class="visual-title">Semantic Tags Structure</div>
-                    <div class="visual-desc">
-                      How semantic elements create meaningful page structure.
-                    </div>
-                  </a>
-
-                  <a
-                    class="visual-link"
-                    href="./html-css/class-02-form-label-input.html"
-                  >
-                    <div class="visual-title">Label and Input Connection</div>
-                    <div class="visual-desc">
-                      How labels, inputs, names, and values work together.
-                    </div>
-                  </a>
-                </div>
-              </article>
-
-              <article class="class-card">
-                <div class="class-header">
-                  <div>
-                    <h3>Class 3: CSS Foundations</h3>
-                    <p>
-                      Selectors, cascade, box model, and styling fundamentals.
-                    </p>
-                  </div>
-                  <span class="mini-badge">4 visuals</span>
-                </div>
-
-                <div class="visual-list">
-                  <a
-                    class="visual-link"
-                    href="./html-css/class-03-box-model.html"
-                  >
-                    <div class="visual-title">Box Model</div>
-                    <div class="visual-desc">
-                      Content, padding, border, and margin explained visually.
-                    </div>
-                  </a>
-
-                  <a
-                    class="visual-link"
-                    href="./html-css/class-03-cascade.html"
-                  >
-                    <div class="visual-title">Cascade Flow</div>
-                    <div class="visual-desc">
-                      How CSS decides which rule finally applies.
-                    </div>
-                  </a>
-
-                  <a
-                    class="visual-link"
-                    href="./html-css/class-03-specificity.html"
-                  >
-                    <div class="visual-title">Specificity Battle</div>
-                    <div class="visual-desc">
-                      Why some selectors win over others.
-                    </div>
-                  </a>
-
-                  <a
-                    class="visual-link"
-                    href="./html-css/class-03-selectors.html"
-                  >
-                    <div class="visual-title">Selector Matching</div>
-                    <div class="visual-desc">
-                      How CSS selectors match elements in the DOM.
-                    </div>
-                  </a>
-                </div>
-              </article>
-            </div>
+    <section class="modules">
+      <details open>
+        <summary>
+          <div>
+            <h2 class="module-title">HTML CSS</h2>
+            <p class="module-desc">
+              Web foundations, layout, responsive design, and UI debugging.
+            </p>
           </div>
-        </details>
 
-        <details>
-          <summary>
-            <div>
-              <h2 class="module-title">JavaScript</h2>
-              <p class="module-desc">
-                Execution model, scope, DOM, async JavaScript, APIs, and browser
-                projects.
-              </p>
-            </div>
+          <div class="module-actions">
+            <span class="badge">8 classes</span>
+            <span class="chevron">⌄</span>
+          </div>
+        </summary>
 
-            <div class="module-actions">
-              <span class="badge">23 classes</span>
-              <span class="chevron">⌄</span>
-            </div>
-          </summary>
+        <div class="module-body">
+          <div class="class-list">
+            <article class="class-card">
+              <div class="class-header">
+                <div>
+                  <h3>Class 1: How the Web Works</h3>
+                  <p>
+                    Browser, HTML, DevTools, and page inspection fundamentals.
+                  </p>
+                </div>
+                <span class="mini-badge">1 visual</span>
+              </div>
 
-          <div class="module-body">
-            <div class="class-list">
-              <article class="class-card">
-                <div class="class-header">
-                  <div>
-                    <h3>Class 1: Variables, Hoisting, and Execution</h3>
-                    <p>
-                      How JavaScript prepares memory and executes code line by
-                      line.
-                    </p>
+              <div class="visual-list">
+                <a class="visual-link" href="./class 1/web-works.html">
+                  <div class="visual-title">How Web Works</div>
+                  <div class="visual-desc">
+                    How a browser requests, receives, and renders a page.
                   </div>
-                  <span class="mini-badge">2 visuals</span>
+                </a>
+              </div>
+            </article>
+
+            <article class="class-card">
+              <div class="class-header">
+                <div>
+                  <h3>Class 2: Semantic HTML and Forms</h3>
+                  <p>Structure, meaning, inputs, labels, and form basics.</p>
                 </div>
+                <span class="mini-badge">2 visuals</span>
+              </div>
 
-                <div class="visual-list">
-                  <a
-                    class="visual-link"
-                    href="./javascript/js-execution-context.html"
-                  >
-                    <div class="visual-title">
-                      Execution Context and Scope Chain
-                    </div>
-                    <div class="visual-desc">
-                      Creation phase, execution phase, call stack, and scope
-                      lookup.
-                    </div>
-                  </a>
+              <div class="visual-list">
+                <a class="visual-link" href="./html-css/class-02-semantic-tags.html">
+                  <div class="visual-title">Semantic Tags Structure</div>
+                  <div class="visual-desc">
+                    How semantic elements create meaningful page structure.
+                  </div>
+                </a>
 
-                  <a
-                    class="visual-link"
-                    href="./javascript/var-let-const-tdz.html"
-                  >
-                    <div class="visual-title">var, let, const and TDZ</div>
-                    <div class="visual-desc">
-                      Function scope, block scope, hoisting, and temporal dead
-                      zone.
-                    </div>
-                  </a>
+                <a class="visual-link" href="./html-css/class-02-form-label-input.html">
+                  <div class="visual-title">Label and Input Connection</div>
+                  <div class="visual-desc">
+                    How labels, inputs, names, and values work together.
+                  </div>
+                </a>
+              </div>
+            </article>
+
+            <article class="class-card">
+              <div class="class-header">
+                <div>
+                  <h3>Class 3: CSS Foundations</h3>
+                  <p>
+                    Selectors, cascade, box model, and styling fundamentals.
+                  </p>
                 </div>
-              </article>
-            </div>
+                <span class="mini-badge">4 visuals</span>
+              </div>
+
+              <div class="visual-list">
+                <a class="visual-link" href="./html-css/class-03-box-model.html">
+                  <div class="visual-title">Box Model</div>
+                  <div class="visual-desc">
+                    Content, padding, border, and margin explained visually.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./html-css/class-03-cascade.html">
+                  <div class="visual-title">Cascade Flow</div>
+                  <div class="visual-desc">
+                    How CSS decides which rule finally applies.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./html-css/class-03-specificity.html">
+                  <div class="visual-title">Specificity Battle</div>
+                  <div class="visual-desc">
+                    Why some selectors win over others.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./html-css/class-03-selectors.html">
+                  <div class="visual-title">Selector Matching</div>
+                  <div class="visual-desc">
+                    How CSS selectors match elements in the DOM.
+                  </div>
+                </a>
+              </div>
+            </article>
           </div>
-        </details>
+        </div>
+      </details>
 
-        <details>
-          <summary>
-            <div>
-              <h2 class="module-title">React</h2>
-              <p class="module-desc">
-                Components, props, state, hooks, routing, rendering, and
-                performance.
-              </p>
-            </div>
-
-            <div class="module-actions">
-              <span class="badge">Coming soon</span>
-              <span class="chevron">⌄</span>
-            </div>
-          </summary>
-
-          <div class="module-body">
-            <p class="empty">React visualizations will be added here.</p>
+      <details>
+        <summary>
+          <div>
+            <h2 class="module-title">JavaScript</h2>
+            <p class="module-desc">
+              Execution model, scope, DOM, async JavaScript, APIs, and browser
+              projects.
+            </p>
           </div>
-        </details>
 
-        <details>
-          <summary>
-            <div>
-              <h2 class="module-title">MERN</h2>
-              <p class="module-desc">
-                APIs, auth, database, payments, deployment, and full-stack
-                architecture.
-              </p>
-            </div>
-
-            <div class="module-actions">
-              <span class="badge">Coming soon</span>
-              <span class="chevron">⌄</span>
-            </div>
-          </summary>
-
-          <div class="module-body">
-            <p class="empty">MERN visualizations will be added here.</p>
+          <div class="module-actions">
+            <span class="badge">23 classes</span>
+            <span class="chevron">⌄</span>
           </div>
-        </details>
-      </section>
-    </main>
-  </body>
+        </summary>
+
+        <div class="module-body">
+          <div class="class-list">
+            <article class="class-card">
+              <div class="class-header">
+                <div>
+                  <h3>Class 1: Variables, Hoisting, and Execution</h3>
+                  <p>
+                    How JavaScript prepares memory and executes code line by
+                    line.
+                  </p>
+                </div>
+                <span class="mini-badge">2 visuals</span>
+              </div>
+
+              <div class="visual-list">
+                <a class="visual-link" href="./javascript/js-execution-context.html">
+                  <div class="visual-title">
+                    Execution Context and Scope Chain
+                  </div>
+                  <div class="visual-desc">
+                    Creation phase, execution phase, call stack, and scope
+                    lookup.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./javascript/var-let-const-tdz.html">
+                  <div class="visual-title">var, let, const and TDZ</div>
+                  <div class="visual-desc">
+                    Function scope, block scope, hoisting, and temporal dead
+                    zone.
+                  </div>
+                </a>
+              </div>
+            </article>
+            <!-- class 3 animations -->
+            <article class="class-card">
+              <div class="class-header">
+                <div>
+                  <h3>Class 3: Function Call Stack & Execution Flow</h3>
+                  <p>
+                    How JavaScript manages function calls, nested function
+                    executions, and the runtime call stack.
+                  </p>
+                </div>
+                <span class="mini-badge">6 visuals</span>
+              </div>
+
+              <div class="visual-list">
+
+                <a class="visual-link" href="./LLD2/class3/completeExec.html">
+                  <div class="visual-title">Complete Execution</div>
+                  <div class="visual-desc">
+                    Memory Creation Phase and Code Execution Phase together.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./LLD2/class3/closureMechanism.html">
+                  <div class="visual-title">Closure Mechanism</div>
+                  <div class="visual-desc">
+                    How closures capture variables from outer scopes.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./LLD2/class3/closurePersistant.html">
+                  <div class="visual-title">Closure Persistence</div>
+                  <div class="visual-desc">
+                    Why captured variables stay alive after the parent function ends.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./LLD2/class3/hoistingDiff.html">
+                  <div class="visual-title">Hoisting Differences</div>
+                  <div class="visual-desc">
+                    Compare var, let and const during memory creation.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./LLD2/class3/scopeChain.html">
+                  <div class="visual-title">Scope Chain</div>
+                  <div class="visual-desc">
+                    Visualize lexical scope lookup and variable resolution.
+                  </div>
+                </a>
+
+                <a class="visual-link" href="./LLD2/class3/puttingAllTogether.html">
+                  <div class="visual-title">Putting It All Together</div>
+                  <div class="visual-desc">
+                    Complete walkthrough combining execution context, call stack and closures.
+                  </div>
+                </a>
+
+              </div>
+            </article>
+          </div>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <div>
+            <h2 class="module-title">React</h2>
+            <p class="module-desc">
+              Components, props, state, hooks, routing, rendering, and
+              performance.
+            </p>
+          </div>
+
+          <div class="module-actions">
+            <span class="badge">Coming soon</span>
+            <span class="chevron">⌄</span>
+          </div>
+        </summary>
+
+        <div class="module-body">
+          <p class="empty">React visualizations will be added here.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary>
+          <div>
+            <h2 class="module-title">MERN</h2>
+            <p class="module-desc">
+              APIs, auth, database, payments, deployment, and full-stack
+              architecture.
+            </p>
+          </div>
+
+          <div class="module-actions">
+            <span class="badge">Coming soon</span>
+            <span class="chevron">⌄</span>
+          </div>
+        </summary>
+
+        <div class="module-body">
+          <p class="empty">MERN visualizations will be added here.</p>
+        </div>
+      </details>
+    </section>
+  </main>
+</body>
+
 </html>
