@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Bubbling — Interactive Visualization</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1a2e;
+        }
+
+        .app {
+            width: 940px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* Top bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px 16px;
+        }
+
+        .step-indicator {
+            font-size: 13px;
+            font-weight: 600;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-track {
+            display: flex;
+            gap: 4px;
+        }
+
+        .progress-track .pip {
+            width: 32px;
+            height: 4px;
+            border-radius: 2px;
+            background: #e2e8f0;
+            transition: background 0.4s ease;
+        }
+
+        .progress-track .pip.done {
+            background: #3b82f6;
+        }
+
+        .progress-track .pip.current {
+            background: #3b82f6;
+        }
+
+        /* Main card */
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 30px rgba(0, 0, 0, 0.04);
+            min-height: 500px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Scene container */
+        .scene {
+            position: absolute;
+            inset: 0;
+            padding: 48px 56px 80px;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            transform: translateY(8px);
+        }
+
+        .scene.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        /* Bottom bar inside card */
+        .bottom-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 56px;
+            background: #f8fafc;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .explanation {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+
+        .explanation strong {
+            color: #334155;
+            font-weight: 600;
+        }
+
+        /* Navigation */
+        .nav {
+            display: flex;
+            gap: 8px;
+            padding: 20px 4px 0;
+            justify-content: flex-end;
+        }
+
+        .nav-btn {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .nav-btn.back {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .nav-btn.back:hover:not(:disabled) {
+            background: #e2e8f0;
+        }
+
+        .nav-btn.next {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        .nav-btn.next:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        /* DOM Tree */
+        .dom-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            margin: 0 auto;
+        }
+
+        .dom-node {
+            padding: 10px 28px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: #475569;
+            transition: all 0.4s ease;
+            position: relative;
+            text-align: center;
+            min-width: 160px;
+        }
+
+        .dom-node.highlight-blue {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            color: #1d4ed8;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .dom-node.highlight-green {
+            border-color: #22c55e;
+            background: #f0fdf4;
+            color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+
+        .dom-node.faded {
+            opacity: 0.35;
+        }
+
+        .dom-node.removed {
+            opacity: 0;
+            transform: scale(0.9) translateX(20px);
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+            overflow: hidden;
+        }
+
+        .dom-connector {
+            width: 2px;
+            height: 20px;
+            background: #e2e8f0;
+            transition: background 0.4s ease;
+        }
+
+        .dom-connector.active {
+            background: #3b82f6;
+        }
+
+        /* Listener badge */
+        .listener-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: #dbeafe;
+            color: #2563eb;
+            margin-top: 4px;
+        }
+
+        .listener-badge.green {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        /* Info boxes */
+        .info-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 14px 20px;
+            line-height: 1.8;
+            color: #475569;
+        }
+
+        .info-box .label {
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-box .value {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .info-box .value.blue {
+            color: #2563eb;
+        }
+
+        .info-box .value.green {
+            color: #16a34a;
+        }
+
+        /* Scene specific layouts */
+        .scene-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 28px;
+        }
+
+        .scene-layout {
+            display: flex;
+            gap: 40px;
+            flex: 1;
+            align-items: flex-start;
+        }
+
+        .scene-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scene-right {
+            flex: 0 0 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Click indicator */
+        .click-indicator {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid #3b82f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            right: -42px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .click-indicator.show {
+            opacity: 1;
+            animation: click-ring 1s ease-out;
+        }
+
+        @keyframes click-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.3);
+            }
+
+            100% {
+                box-shadow: 0 0 0 12px rgba(59, 130, 246, 0);
+            }
+        }
+
+        /* Event bubble */
+        .event-bubble {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            opacity: 0;
+            transition: all 0.6s ease;
+            z-index: 10;
+            letter-spacing: 0.3px;
+        }
+
+        .event-bubble.show {
+            opacity: 1;
+        }
+
+        /* Check / X marks */
+        .check-result {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .check-result.show {
+            opacity: 1;
+        }
+
+        .check-result.no {
+            color: #94a3b8;
+        }
+
+        .check-result.yes {
+            color: #16a34a;
+        }
+
+        /* Code block */
+        .code-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px 20px;
+            border-radius: 10px;
+            line-height: 1.8;
+            overflow-x: auto;
+        }
+
+        .code-display .kw {
+            color: #c084fc;
+        }
+
+        .code-display .fn {
+            color: #60a5fa;
+        }
+
+        .code-display .str {
+            color: #34d399;
+        }
+
+        .code-display .cm {
+            color: #64748b;
+        }
+
+        .code-display .hl {
+            background: rgba(59, 130, 246, 0.15);
+            display: inline;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .code-display .hl-green {
+            background: rgba(34, 197, 94, 0.15);
+            display: inline;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        /* Transition arrow */
+        .bubble-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            color: #3b82f6;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .bubble-arrow.show {
+            opacity: 1;
+        }
+
+        .bubble-arrow .arrow-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        /* Summary timeline */
+        .summary-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            margin: 0 auto;
+        }
+
+        .summary-node {
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            min-width: 260px;
+            opacity: 0;
+            transform: translateY(6px);
+            transition: all 0.35s ease;
+        }
+
+        .summary-node.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .summary-node.neutral {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .summary-node.blue {
+            background: #eff6ff;
+            color: #2563eb;
+        }
+
+        .summary-node.green {
+            background: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .summary-connector {
+            width: 2px;
+            height: 12px;
+            background: #e2e8f0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .summary-connector.show {
+            opacity: 1;
+        }
+
+        .takeaway {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 24px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            line-height: 1.6;
+        }
+
+        .takeaway.show {
+            opacity: 1;
+        }
+
+        .takeaway code {
+            font-family: 'JetBrains Mono', monospace;
+            background: #eff6ff;
+            color: #2563eb;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        /* Fade-in utility */
+        .fade-in {
+            opacity: 0;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            transform: translateY(4px);
+        }
+
+        .fade-in.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* New item animation */
+        .new-item-glow {
+            animation: glow-in 0.6s ease;
+        }
+
+        @keyframes glow-in {
+            0% {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        /* Quick bubble replay */
+        .quick-bubble {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3b82f6;
+            opacity: 0;
+            z-index: 20;
+        }
+
+        /* Step 6 delete flow */
+        .delete-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .delete-flow .flow-item {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #475569;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .delete-flow .flow-item.show {
+            opacity: 1;
+        }
+
+        .delete-flow .flow-arrow {
+            color: #94a3b8;
+            font-size: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .delete-flow .flow-arrow.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app">
+        <!-- Top bar -->
+        <div class="top-bar">
+            <div class="step-indicator" id="step-indicator">Step 1 / 8</div>
+            <div class="progress-track" id="progress-track">
+                <div class="pip current"></div>
+                <div class="pip"></div>
+                <div class="pip"></div>
+                <div class="pip"></div>
+                <div class="pip"></div>
+                <div class="pip"></div>
+                <div class="pip"></div>
+                <div class="pip"></div>
+            </div>
+        </div>
+
+        <!-- Main card -->
+        <div class="card">
+
+            <!-- Step 1: HTML Structure -->
+            <div class="scene active" id="step-1">
+                <div class="scene-title">HTML Structure</div>
+                <div class="scene-layout">
+                    <div class="scene-left">
+                        <div class="dom-tree">
+                            <div class="dom-node faded" id="s1-body">body</div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node highlight-blue" id="s1-list">
+                                itemList
+                                <div class="listener-badge" style="margin-top:6px">🎧 click listener</div>
+                            </div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node faded" id="s1-card">item-card</div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node faded" id="s1-btn">button.delete-btn</div>
+                        </div>
+                    </div>
+                    <div class="scene-right">
+                        <div class="section-label">Listener Attached To</div>
+                        <div class="info-box">
+                            <span class="value blue">itemList</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        <strong>Only the parent has a click listener attached.</strong> None of the child elements have
+                        their own listeners.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: User Clicks -->
+            <div class="scene" id="step-2">
+                <div class="scene-title">User Clicks the Delete Button</div>
+                <div class="scene-layout">
+                    <div class="scene-left">
+                        <div class="dom-tree">
+                            <div class="dom-node faded">body</div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node" id="s2-list">
+                                itemList
+                                <div class="listener-badge" style="margin-top:6px;opacity:0.4">🎧 click listener</div>
+                            </div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node faded">item-card</div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node highlight-blue" id="s2-btn">
+                                button.delete-btn
+                                <div class="click-indicator show" id="s2-click">🖱</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-right">
+                        <div class="section-label">Event Created</div>
+                        <div class="info-box">
+                            <div><span class="label">event.target</span></div>
+                            <div><span class="value blue">button.delete-btn</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        <strong>Every click creates an event object.</strong> The event begins exactly where the user
+                        clicked.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Bubbling Starts -->
+            <div class="scene" id="step-3">
+                <div class="scene-title">Bubbling Starts</div>
+                <div class="scene-layout">
+                    <div class="scene-left">
+                        <div class="dom-tree" id="s3-tree">
+                            <div class="dom-node faded">body</div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node faded">itemList</div>
+                            <div class="dom-connector" id="s3-conn2"></div>
+                            <div class="dom-node" id="s3-card" style="position:relative">
+                                item-card
+                                <div class="event-bubble" id="s3-bubble"
+                                    style="left:-50px;top:50%;transform:translateY(-50%)">EVT</div>
+                            </div>
+                            <div class="dom-connector" id="s3-conn1"></div>
+                            <div class="dom-node faded" id="s3-btn">button.delete-btn</div>
+                        </div>
+                    </div>
+                    <div class="scene-right">
+                        <div class="section-label">Bubble Path</div>
+                        <div class="info-box" style="margin-bottom:8px">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="font-size:16px">↑</span>
+                                <span>button → <span class="value">item-card</span></span>
+                            </div>
+                        </div>
+                        <div class="section-label">Checking...</div>
+                        <div class="info-box">
+                            <div>Listener found?</div>
+                            <div class="check-result no show" id="s3-check">✕ No</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        The event <strong>bubbles up</strong> from the button to its parent. <strong>item-card</strong>
+                        has no click listener, so the event continues upward.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Continue Bubbling -->
+            <div class="scene" id="step-4">
+                <div class="scene-title">Event Reaches itemList</div>
+                <div class="scene-layout">
+                    <div class="scene-left">
+                        <div class="dom-tree">
+                            <div class="dom-node faded">body</div>
+                            <div class="dom-connector"></div>
+                            <div class="dom-node highlight-green" id="s4-list" style="position:relative">
+                                itemList
+                                <div class="listener-badge green" style="margin-top:6px">🎧 click listener</div>
+                                <div class="event-bubble show" id="s4-bubble"
+                                    style="left:-50px;top:50%;transform:translateY(-50%)">EVT</div>
+                            </div>
+                            <div class="dom-connector active"></div>
+                            <div class="dom-node faded">item-card</div>
+                            <div class="dom-connector active"></div>
+                            <div class="dom-node faded">button.delete-btn</div>
+                        </div>
+                    </div>
+                    <div class="scene-right">
+                        <div class="section-label">Bubble Path</div>
+                        <div class="info-box" style="margin-bottom:8px">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="font-size:16px">↑</span>
+                                <span>item-card → <span class="value green">itemList</span></span>
+                            </div>
+                        </div>
+                        <div class="section-label">Checking...</div>
+                        <div class="info-box">
+                            <div>Listener found?</div>
+                            <div class="check-result yes show">✓ Yes!</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        The browser finally reaches an element with a click listener. <strong>The callback will now
+                            execute.</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Callback Runs -->
+            <div class="scene" id="step-5">
+                <div class="scene-title">Callback Executes</div>
+                <div class="scene-layout" style="flex-direction:column;gap:20px">
+                    <div class="code-display" id="s5-code">
+                        <span class="cm">// The listener on itemList</span>
+                        itemList.<span class="fn">addEventListener</span>(<span class="str">"click"</span>, <span
+                            class="kw">function</span>(<span class="hl">event</span>) {
+                        <span class="cm">// event object arrives here</span>
+                        });
+                    </div>
+                    <div style="display:flex;gap:16px">
+                        <div class="info-box" style="flex:1">
+                            <div><span class="label">event.target</span></div>
+                            <div><span class="value blue">button.delete-btn</span></div>
+                            <div style="font-size:11px;color:#94a3b8;margin-top:4px">Where the click started</div>
+                        </div>
+                        <div class="info-box" style="flex:1">
+                            <div><span class="label">event.currentTarget</span></div>
+                            <div><span class="value green">itemList</span></div>
+                            <div style="font-size:11px;color:#94a3b8;margin-top:4px">Where the listener lives</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        <strong>The listener belongs to itemList.</strong> But the event still remembers where the click
+                        started — <strong>event.target</strong> points to the button.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: Delete Logic -->
+            <div class="scene" id="step-6">
+                <div class="scene-title">Delete Logic Runs</div>
+                <div class="scene-layout">
+                    <div class="scene-left">
+                        <div class="code-display" style="font-size:12px;margin-bottom:16px" id="s6-code">
+                            <span class="kw">if</span> (<span class="hl-green">event.target.classList.contains(<span
+                                    class="str">"delete-btn"</span>)</span>) {
+                            event.target
+                            .parentElement <span class="cm">// → item-card</span>
+                            .<span class="fn">remove</span>(); <span class="cm">// → gone</span>
+                            }
+                        </div>
+                        <div class="info-box" id="s6-result"
+                            style="text-align:center;opacity:0;transition:opacity 0.4s">
+                            <div class="check-result yes show">✓ Condition is true</div>
+                        </div>
+                    </div>
+                    <div class="scene-right">
+                        <div class="section-label">Execution Flow</div>
+                        <div class="delete-flow" id="s6-flow">
+                            <div class="flow-item" id="s6f1">event.target → button</div>
+                            <div class="flow-arrow" id="s6f1a">↓</div>
+                            <div class="flow-item" id="s6f2">.parentElement → item-card</div>
+                            <div class="flow-arrow" id="s6f2a">↓</div>
+                            <div class="flow-item" id="s6f3" style="color:#dc2626;font-weight:600">.remove() ✕</div>
+                        </div>
+                        <div style="margin-top:16px">
+                            <div class="dom-node" id="s6-card" style="transition:all 0.6s ease;font-size:12px">
+                                item-card
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        The parent listener identifies and removes the correct card using <strong>event.target</strong>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 7: Why Powerful -->
+            <div class="scene" id="step-7">
+                <div class="scene-title">Why This Is Powerful</div>
+                <div class="scene-layout">
+                    <div class="scene-left">
+                        <div class="dom-tree">
+                            <div class="dom-node highlight-green" style="position:relative">
+                                itemList
+                                <div class="listener-badge green" style="margin-top:6px">🎧 1 listener handles all</div>
+                            </div>
+                            <div class="dom-connector active"></div>
+                            <div style="display:flex;gap:12px" id="s7-cards">
+                                <div class="dom-node" id="s7-card1"
+                                    style="font-size:11px;min-width:100px;padding:8px 14px">
+                                    Task 1
+                                </div>
+                                <div class="dom-node" id="s7-card2"
+                                    style="font-size:11px;min-width:100px;padding:8px 14px">
+                                    Task 2
+                                </div>
+                                <div class="dom-node" id="s7-new"
+                                    style="font-size:11px;min-width:100px;padding:8px 14px;opacity:0;border-color:#22c55e;background:#f0fdf4;color:#16a34a">
+                                    New Task ✨
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="scene-right">
+                        <div class="section-label">Listeners Required</div>
+                        <div class="info-box" style="margin-bottom:8px">
+                            <div><span class="value green">1</span> <span style="color:#94a3b8">— on itemList</span>
+                            </div>
+                        </div>
+                        <div class="section-label" style="margin-top:8px">Works For</div>
+                        <div class="info-box">
+                            <div>✓ Existing children</div>
+                            <div>✓ <span class="value green">Future children</span></div>
+                        </div>
+                        <div class="info-box" id="s7-status"
+                            style="margin-top:8px;opacity:0;transition:opacity 0.4s;text-align:center">
+                            <div class="check-result yes show">No new listeners needed!</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        <strong>One parent listener automatically works for every current and future child
+                            element.</strong> No need to attach/remove listeners as items change.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 8: Summary -->
+            <div class="scene" id="step-8">
+                <div class="scene-title" style="text-align:center">How Event Bubbling Works</div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                    <div class="summary-flow" id="summary-flow">
+                        <div class="summary-node neutral" id="sm0">🖱 Click happens</div>
+                        <div class="summary-connector" id="smc0"></div>
+                        <div class="summary-node blue" id="sm1">Event starts at event.target</div>
+                        <div class="summary-connector" id="smc1"></div>
+                        <div class="summary-node blue" id="sm2">↑ Event bubbles upward</div>
+                        <div class="summary-connector" id="smc2"></div>
+                        <div class="summary-node neutral" id="sm3">Browser checks each parent</div>
+                        <div class="summary-connector" id="smc3"></div>
+                        <div class="summary-node green" id="sm4">✓ Listener found</div>
+                        <div class="summary-connector" id="smc4"></div>
+                        <div class="summary-node green" id="sm5">Callback executes</div>
+                        <div class="summary-connector" id="smc5"></div>
+                        <div class="summary-node green" id="sm6">event.target identifies what was clicked</div>
+                    </div>
+                    <div class="takeaway" id="takeaway-final">
+                        <code>Event Bubbling</code> is the reason <code>Event Delegation</code> works.
+                    </div>
+                </div>
+                <div class="bottom-bar">
+                    <div class="explanation">
+                        <strong>This pattern means fewer listeners, better performance, and dynamic element
+                            support.</strong>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- .card -->
+
+        <!-- Navigation -->
+        <div class="nav">
+            <button class="nav-btn back" id="btn-back" disabled>◀ Back</button>
+            <button class="nav-btn next" id="btn-next">Next ▶</button>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_STEPS = 8;
+        let current = 1;
+        let animTimeouts = [];
+
+        function clearAnims() {
+            animTimeouts.forEach(t => clearTimeout(t));
+            animTimeouts = [];
+        }
+
+        function wait(ms) {
+            return new Promise(r => {
+                animTimeouts.push(setTimeout(r, ms));
+            });
+        }
+
+        function updateUI() {
+            // Step indicator
+            document.getElementById('step-indicator').textContent = `Step ${current} / ${TOTAL_STEPS}`;
+
+            // Progress pips
+            const pips = document.querySelectorAll('.progress-track .pip');
+            pips.forEach((p, i) => {
+                p.classList.remove('done', 'current');
+                if (i < current - 1) p.classList.add('done');
+                if (i === current - 1) p.classList.add('current');
+            });
+
+            // Nav buttons
+            document.getElementById('btn-back').disabled = current === 1;
+            document.getElementById('btn-next').disabled = current === TOTAL_STEPS;
+
+            // Scenes
+            document.querySelectorAll('.scene').forEach((s, i) => {
+                s.classList.toggle('active', i === current - 1);
+            });
+        }
+
+        function goTo(step, direction) {
+            if (step < 1 || step > TOTAL_STEPS) return;
+            clearAnims();
+            resetStep(step);
+            current = step;
+            updateUI();
+            setTimeout(() => runStepAnim(step), 100);
+        }
+
+        function resetStep(n) {
+            if (n === 3) {
+                const bubble = document.getElementById('s3-bubble');
+                if (bubble) { bubble.classList.remove('show'); }
+            }
+            if (n === 6) {
+                document.getElementById('s6-result').style.opacity = '0';
+                ['s6f1', 's6f1a', 's6f2', 's6f2a', 's6f3'].forEach(id => {
+                    document.getElementById(id).classList.remove('show');
+                });
+                const card = document.getElementById('s6-card');
+                card.classList.remove('removed');
+                card.style.opacity = '1';
+                card.style.transform = '';
+            }
+            if (n === 7) {
+                const newEl = document.getElementById('s7-new');
+                newEl.style.opacity = '0';
+                document.getElementById('s7-status').style.opacity = '0';
+            }
+            if (n === 8) {
+                for (let i = 0; i <= 6; i++) {
+                    document.getElementById(`sm${i}`).classList.remove('show');
+                }
+                for (let i = 0; i <= 5; i++) {
+                    document.getElementById(`smc${i}`).classList.remove('show');
+                }
+                document.getElementById('takeaway-final').classList.remove('show');
+            }
+        }
+
+        async function runStepAnim(n) {
+            if (n === 3) {
+                await wait(400);
+                const bubble = document.getElementById('s3-bubble');
+                bubble.classList.add('show');
+            }
+
+            if (n === 6) {
+                await wait(300);
+                document.getElementById('s6f1').classList.add('show');
+                await wait(300);
+                document.getElementById('s6f1a').classList.add('show');
+                await wait(300);
+                document.getElementById('s6f2').classList.add('show');
+                await wait(300);
+                document.getElementById('s6f2a').classList.add('show');
+                await wait(300);
+                document.getElementById('s6f3').classList.add('show');
+                await wait(200);
+                document.getElementById('s6-result').style.opacity = '1';
+                await wait(500);
+                const card = document.getElementById('s6-card');
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9) translateX(20px)';
+            }
+
+            if (n === 7) {
+                await wait(600);
+                const newEl = document.getElementById('s7-new');
+                newEl.style.opacity = '1';
+                newEl.style.transition = 'opacity 0.5s ease';
+                await wait(500);
+                document.getElementById('s7-status').style.opacity = '1';
+            }
+
+            if (n === 8) {
+                const ids = ['sm0', 'smc0', 'sm1', 'smc1', 'sm2', 'smc2', 'sm3', 'smc3', 'sm4', 'smc4', 'sm5', 'smc5', 'sm6'];
+                for (const id of ids) {
+                    await wait(140);
+                    document.getElementById(id).classList.add('show');
+                }
+                await wait(350);
+                document.getElementById('takeaway-final').classList.add('show');
+            }
+        }
+
+        document.getElementById('btn-next').addEventListener('click', () => {
+            if (current < TOTAL_STEPS) goTo(current + 1, 'next');
+        });
+
+        document.getElementById('btn-back').addEventListener('click', () => {
+            if (current > 1) goTo(current - 1, 'back');
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                if (current < TOTAL_STEPS) goTo(current + 1, 'next');
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (current > 1) goTo(current - 1, 'back');
+            }
+        });
+
+        // Initial
+        updateUI();
+    </script>
+
+</body>
+
+</html>
