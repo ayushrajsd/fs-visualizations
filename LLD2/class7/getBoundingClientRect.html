@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>getBoundingClientRect Visualizer</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --text: #172033;
+        --muted: #64748b;
+        --border: #d9e2ef;
+        --accent: #2563eb;
+        --visible: #16a34a;
+        --hidden: #94a3b8;
+        --warning: #f59e0b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page-header {
+        padding: 28px 24px 20px;
+        background: linear-gradient(135deg, #eff6ff, #ffffff);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .page-header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(26px, 4vw, 42px);
+      }
+
+      .page-header p {
+        margin: 0;
+        max-width: 900px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 24px;
+        background: rgba(255, 255, 255, 0.96);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(10px);
+      }
+
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font: inherit;
+        cursor: pointer;
+        background: var(--accent);
+        color: white;
+      }
+
+      button.secondary {
+        background: #e2e8f0;
+        color: var(--text);
+      }
+
+      label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 20px;
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 24px;
+        align-items: start;
+      }
+
+      .demo-area {
+        min-height: 220vh;
+        position: relative;
+      }
+
+      .explanation {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .explanation h2 {
+        margin-top: 0;
+      }
+
+      .formula {
+        padding: 12px;
+        border-radius: 8px;
+        background: #eff6ff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #1d4ed8;
+        overflow-x: auto;
+      }
+
+      .movie-card {
+        min-height: 160px;
+        margin: 38px 0;
+        padding: 22px;
+        border-radius: 14px;
+        border: 3px solid var(--hidden);
+        background: white;
+        opacity: 0.25;
+        transform: translateY(18px);
+        transition:
+          opacity 0.45s ease,
+          transform 0.45s ease,
+          border-color 0.25s ease,
+          box-shadow 0.25s ease;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+      }
+
+      .movie-card.visible {
+        opacity: 1;
+        transform: translateY(0);
+        border-color: var(--visible);
+        box-shadow: 0 14px 30px rgba(22, 163, 74, 0.18);
+      }
+
+      .movie-card.active-card {
+        outline: 4px solid rgba(37, 99, 235, 0.22);
+      }
+
+      .movie-card h3 {
+        margin: 0 0 10px;
+      }
+
+      .movie-card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .metrics-panel {
+        position: sticky;
+        top: 78px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.1);
+      }
+
+      .metrics-panel header {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+        background: #f8fafc;
+      }
+
+      .metrics-panel header h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+
+      .metrics-panel header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .viewport-map {
+        position: relative;
+        margin: 18px;
+        height: 320px;
+        border: 3px solid var(--accent);
+        border-radius: 12px;
+        background: linear-gradient(
+          to bottom,
+          rgba(37, 99, 235, 0.05),
+          rgba(37, 99, 235, 0.02)
+        );
+        overflow: hidden;
+      }
+
+      .viewport-label {
+        position: absolute;
+        left: 10px;
+        top: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .threshold-line {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-top: 3px dashed var(--warning);
+      }
+
+      .threshold-label {
+        position: absolute;
+        right: 8px;
+        bottom: 7px;
+        background: white;
+        padding: 2px 6px;
+        border-radius: 5px;
+        font-size: 11px;
+        color: #92400e;
+      }
+
+      .mini-card {
+        position: absolute;
+        left: 52px;
+        right: 52px;
+        min-height: 54px;
+        border-radius: 8px;
+        border: 2px solid var(--hidden);
+        background: #ffffff;
+        display: grid;
+        place-items: center;
+        font-size: 13px;
+        font-weight: 700;
+        transition:
+          top 0.08s linear,
+          border-color 0.2s ease,
+          background 0.2s ease;
+      }
+
+      .mini-card.visible {
+        border-color: var(--visible);
+        background: #ecfdf3;
+        color: #166534;
+      }
+
+      .metrics {
+        display: grid;
+        gap: 8px;
+        padding: 0 18px 18px;
+      }
+
+      .metric {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border: 1px solid #eef2f7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 13px;
+      }
+
+      .metric span:first-child {
+        color: var(--muted);
+      }
+
+      .status {
+        margin: 0 18px 18px;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 800;
+        background: #f1f5f9;
+      }
+
+      .status.visible {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .status.hidden {
+        background: #f1f5f9;
+        color: #475569;
+      }
+
+      .legend {
+        padding: 14px 18px 18px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .legend strong {
+        color: var(--text);
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics-panel {
+          position: relative;
+          top: 0;
+        }
+
+        .demo-area {
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="page-header">
+      <h1>getBoundingClientRect() Visualizer</h1>
+      <p>
+        Scroll the page and watch how each card's position changes relative to
+        the viewport. A card becomes visible when its top edge moves above the
+        bottom edge of the viewport.
+      </p>
+    </header>
+
+    <div class="toolbar">
+      <button id="scrollNextBtn">Scroll to Next Card</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+
+      <label>
+        <input id="toggleReveal" type="checkbox" checked />
+        Toggle visibility automatically
+      </label>
+
+      <label>
+        <input id="toggleOnce" type="checkbox" checked />
+        Keep revealed cards visible
+      </label>
+    </div>
+
+    <main class="layout">
+      <section class="demo-area">
+        <div class="explanation">
+          <h2>The condition we are visualizing</h2>
+          <p>
+            <code>getBoundingClientRect().top</code> gives the distance between
+            the element's top edge and the viewport's top edge.
+          </p>
+          <div class="formula">
+            if (rect.top &lt; window.innerHeight) {<br />
+            &nbsp;&nbsp;card.classList.add('visible');<br />
+            }
+          </div>
+          <p>
+            When <code>rect.top</code> becomes smaller than
+            <code>window.innerHeight</code>, the card's top edge has crossed
+            into the viewport.
+          </p>
+        </div>
+
+        <article class="movie-card">
+          <h3>The Dark Knight</h3>
+          <p>Scroll slowly and observe the live values in the panel.</p>
+        </article>
+
+        <article class="movie-card">
+          <h3>Inception</h3>
+          <p>
+            The top value decreases as this card moves upward toward the
+            viewport.
+          </p>
+        </article>
+
+        <article class="movie-card">
+          <h3>Interstellar</h3>
+          <p>
+            Once top is less than viewport height, the visible class is added.
+          </p>
+        </article>
+
+        <article class="movie-card">
+          <h3>The Matrix</h3>
+          <p>
+            If "keep revealed" is turned off, the card hides again after leaving
+            the viewport.
+          </p>
+        </article>
+
+        <article class="movie-card">
+          <h3>The Godfather</h3>
+          <p>
+            The mini viewport on the right mirrors the active card's position.
+          </p>
+        </article>
+      </section>
+
+      <aside class="metrics-panel">
+        <header>
+          <h2>Live Viewport Measurements</h2>
+          <p>The nearest card is highlighted in blue.</p>
+        </header>
+
+        <div class="viewport-map" aria-label="Viewport position visualization">
+          <div class="viewport-label">Viewport top: 0px</div>
+          <div id="miniCard" class="mini-card">Active card</div>
+          <div class="threshold-line"></div>
+          <div class="threshold-label">window.innerHeight</div>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <span>rect.top</span>
+            <strong id="topValue">0px</strong>
+          </div>
+          <div class="metric">
+            <span>rect.bottom</span>
+            <strong id="bottomValue">0px</strong>
+          </div>
+          <div class="metric">
+            <span>rect.height</span>
+            <strong id="heightValue">0px</strong>
+          </div>
+          <div class="metric">
+            <span>window.innerHeight</span>
+            <strong id="viewportValue">0px</strong>
+          </div>
+          <div class="metric">
+            <span>window.scrollY</span>
+            <strong id="scrollValue">0px</strong>
+          </div>
+        </div>
+
+        <div id="status" class="status hidden">Below viewport</div>
+
+        <div class="legend">
+          <strong>Interpretation</strong><br />
+          Below viewport: <code>rect.top &gt; window.innerHeight</code><br />
+          Entering/inside: <code>rect.top &lt; window.innerHeight</code><br />
+          Above viewport: <code>rect.bottom &lt; 0</code>
+        </div>
+      </aside>
+    </main>
+
+    <script>
+      const cards = Array.from(document.querySelectorAll(".movie-card"));
+      const miniCard = document.querySelector("#miniCard");
+
+      const topValue = document.querySelector("#topValue");
+      const bottomValue = document.querySelector("#bottomValue");
+      const heightValue = document.querySelector("#heightValue");
+      const viewportValue = document.querySelector("#viewportValue");
+      const scrollValue = document.querySelector("#scrollValue");
+      const status = document.querySelector("#status");
+
+      const scrollNextBtn = document.querySelector("#scrollNextBtn");
+      const resetBtn = document.querySelector("#resetBtn");
+      const toggleReveal = document.querySelector("#toggleReveal");
+      const toggleOnce = document.querySelector("#toggleOnce");
+
+      let nextCardIndex = 0;
+
+      function getActiveCard() {
+        const viewportCenter = window.innerHeight / 2;
+
+        return cards.reduce((closestCard, card) => {
+          const rect = card.getBoundingClientRect();
+          const cardCenter = rect.top + rect.height / 2;
+          const distance = Math.abs(cardCenter - viewportCenter);
+
+          if (!closestCard || distance < closestCard.distance) {
+            return { card, distance };
+          }
+
+          return closestCard;
+        }, null).card;
+      }
+
+      function updateVisibility(card, rect) {
+        const hasEnteredViewport = rect.top < window.innerHeight;
+        const hasLeftAbove = rect.bottom < 0;
+
+        if (!toggleReveal.checked) {
+          card.classList.remove("visible");
+          return;
+        }
+
+        if (toggleOnce.checked) {
+          if (hasEnteredViewport) {
+            card.classList.add("visible");
+          }
+        } else {
+          const isCurrentlyVisible =
+            rect.top < window.innerHeight && rect.bottom > 0;
+
+          card.classList.toggle("visible", isCurrentlyVisible);
+        }
+      }
+
+      function updateStatus(rect) {
+        status.classList.remove("visible", "hidden");
+
+        if (rect.bottom < 0) {
+          status.textContent = "Above viewport";
+          status.classList.add("hidden");
+        } else if (rect.top > window.innerHeight) {
+          status.textContent = "Below viewport";
+          status.classList.add("hidden");
+        } else {
+          status.textContent = "Inside viewport: visibility toggled";
+          status.classList.add("visible");
+        }
+      }
+
+      function updateMiniViewport(rect) {
+        const map = document.querySelector(".viewport-map");
+        const mapHeight = map.clientHeight;
+        const scale = mapHeight / window.innerHeight;
+
+        const miniTop = rect.top * scale;
+        const miniHeight = Math.max(36, rect.height * scale);
+
+        miniCard.style.top = `${miniTop}px`;
+        miniCard.style.height = `${miniHeight}px`;
+        miniCard.classList.toggle(
+          "visible",
+          rect.top < window.innerHeight && rect.bottom > 0,
+        );
+      }
+
+      function render() {
+        cards.forEach((card) => {
+          updateVisibility(card, card.getBoundingClientRect());
+          card.classList.remove("active-card");
+        });
+
+        const activeCard = getActiveCard();
+        activeCard.classList.add("active-card");
+
+        const rect = activeCard.getBoundingClientRect();
+
+        topValue.textContent = `${rect.top.toFixed(1)}px`;
+        bottomValue.textContent = `${rect.bottom.toFixed(1)}px`;
+        heightValue.textContent = `${rect.height.toFixed(1)}px`;
+        viewportValue.textContent = `${window.innerHeight}px`;
+        scrollValue.textContent = `${window.scrollY.toFixed(0)}px`;
+
+        updateStatus(rect);
+        updateMiniViewport(rect);
+      }
+
+      scrollNextBtn.addEventListener("click", function () {
+        const card = cards[nextCardIndex % cards.length];
+        nextCardIndex += 1;
+
+        card.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
+
+      resetBtn.addEventListener("click", function () {
+        cards.forEach((card) => card.classList.remove("visible"));
+        nextCardIndex = 0;
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      });
+
+      toggleReveal.addEventListener("change", render);
+      toggleOnce.addEventListener("change", function () {
+        if (!toggleOnce.checked) {
+          cards.forEach((card) => card.classList.remove("visible"));
+        }
+        render();
+      });
+
+      window.addEventListener("scroll", render, { passive: true });
+      window.addEventListener("resize", render);
+
+      render();
+    </script>
+  </body>
+</html>
