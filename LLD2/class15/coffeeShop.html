@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coffee Shop Async/Await Visualizer</title>
+    <style>
+        :root {
+            --bg: #e8eef3;
+            --panel: #fff;
+            --ink: #17202a;
+            --muted: #64748b;
+            --yellow: #ffe63d;
+            --blue: #3182f6;
+            --green: #23b26d;
+            --orange: #f59e0b;
+            --purple: #8b5cf6;
+            --red: #ef4444;
+            --cyan: #06b6d4;
+            --border: #cbd5e1;
+            --shadow: 0 8px 22px rgba(15, 23, 42, .10)
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif
+        }
+
+        button,
+        select {
+            font: inherit
+        }
+
+        .app {
+            height: 100vh;
+            padding: 10px;
+            display: grid;
+            grid-template-rows: 64px 1fr;
+            gap: 10px
+        }
+
+        header {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 900;
+            font-size: clamp(18px, 1.55vw, 25px);
+            white-space: nowrap
+        }
+
+        .logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            background: var(--yellow);
+            display: grid;
+            place-items: center;
+            font-weight: 950
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .btn {
+            border: 0;
+            border-radius: 9px;
+            padding: 9px 13px;
+            color: #fff;
+            font-weight: 850;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, .12)
+        }
+
+        .btn:disabled {
+            opacity: .45;
+            cursor: not-allowed
+        }
+
+        .play {
+            background: var(--green)
+        }
+
+        .pause {
+            background: var(--blue)
+        }
+
+        .step {
+            background: var(--purple)
+        }
+
+        .reset {
+            background: #334155
+        }
+
+        select {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff
+        }
+
+        main {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: minmax(480px, 45%) 1fr;
+            gap: 10px
+        }
+
+        .card {
+            min-height: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden
+        }
+
+        .title {
+            height: 40px;
+            padding: 0 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            font-weight: 900
+        }
+
+        .left {
+            min-height: 0;
+            display: block
+        }
+
+        .editor {
+            height: 100%;
+            display: grid;
+            grid-template-rows: 40px 1fr
+        }
+
+        .code {
+            margin: 0;
+            padding: 6px 0;
+            background: #fffdf2;
+            overflow: hidden;
+            font: 650 clamp(10.5px, .88vw, 14px)/1.26 "SFMono-Regular", Consolas, Monaco, monospace
+        }
+
+        .line {
+            display: grid;
+            grid-template-columns: 36px 1fr;
+            white-space: pre;
+            min-height: 1.26em;
+            padding-right: 8px
+        }
+
+        .ln {
+            color: #94a3b8;
+            text-align: right;
+            padding-right: 10px;
+            user-select: none
+        }
+
+        .src {
+            overflow: hidden
+        }
+
+        .line.active {
+            background: linear-gradient(90deg, #fde04766, #fbbf2470);
+            border-left: 5px solid #f59e0b
+        }
+
+        .line.active .ln {
+            color: #92400e;
+            font-weight: 950
+        }
+
+        .kw {
+            color: #7c3aed
+        }
+
+        .fn {
+            color: #0369a1
+        }
+
+        .str {
+            color: #dc2626
+        }
+
+        .num {
+            color: #059669
+        }
+
+        .obj {
+            color: #1d4ed8
+        }
+
+        .bottom {
+            display: none
+        }
+
+        .body {
+            height: calc(100% - 40px);
+            padding: 9px 11px;
+            overflow: hidden;
+            font-size: 13px;
+            line-height: 1.4
+        }
+
+        .console .body {
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-weight: 650
+        }
+
+        .log {
+            margin: 3px 0;
+            color: #047857
+        }
+
+        .muted {
+            color: var(--muted)
+        }
+
+        .right {
+            min-height: 0;
+            display: grid;
+            grid-template-rows: 165px minmax(0, 1fr);
+            gap: 10px
+        }
+
+        .functions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px
+        }
+
+        .func {
+            position: relative;
+            padding: 11px;
+            border-radius: 12px;
+            border: 2px solid;
+            overflow: hidden;
+            transition: .25s
+        }
+
+        .func h3 {
+            font-size: 15px;
+            margin: 0 0 6px
+        }
+
+        .func p {
+            font-size: 12.5px;
+            color: #475569;
+            margin: 2px 0
+        }
+
+        .green {
+            background: #f0fdf4;
+            border-color: #86efac
+        }
+
+        .blue {
+            background: #eff6ff;
+            border-color: #93c5fd
+        }
+
+        .orange {
+            background: #fff7ed;
+            border-color: #fdba74
+        }
+
+        .func.active {
+            transform: translateY(-2px);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, .12)
+        }
+
+        .bar {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 5px;
+            width: 0;
+            background: currentColor;
+            transition: width .25s linear
+        }
+
+        .runtime {
+            min-height: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: minmax(0, 1fr) 118px;
+            gap: 10px
+        }
+
+        .zone {
+            border: 2px solid;
+            border-radius: 12px;
+            padding: 8px;
+            overflow: hidden
+        }
+
+        .zone h3 {
+            font-size: 14px;
+            margin: 0 0 7px;
+            display: flex;
+            justify-content: space-between
+        }
+
+        .stack {
+            background: #eff6ff;
+            border-color: #93c5fd
+        }
+
+        .api {
+            background: #fffbeb;
+            border-color: #fcd34d
+        }
+
+        .micro {
+            background: #f5f3ff;
+            border-color: #c4b5fd
+        }
+
+        .task {
+            grid-column: 1/4;
+            background: #fff1f2;
+            border-color: #fca5a5
+        }
+
+        .slot {
+            min-height: 34px;
+            margin: 5px 0;
+            padding: 6px;
+            border: 1px dashed currentColor;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, .8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12.5px;
+            font-weight: 800
+        }
+
+        .slot.empty {
+            color: #94a3b8;
+            font-weight: 650
+        }
+
+        .item {
+            animation: pop .28s ease both
+        }
+
+        @keyframes pop {
+            from {
+                opacity: 0;
+                transform: scale(.9)
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1)
+            }
+        }
+
+        .timeline {
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            gap: 5px;
+            padding: 10px 12px
+        }
+
+        .dot {
+            height: 13px;
+            border-radius: 999px;
+            background: #e2e8f0
+        }
+
+        .dot.done {
+            background: #22c55e
+        }
+
+        .dot.now {
+            background: #f59e0b;
+            transform: scaleY(1.35)
+        }
+
+        .foot {
+            padding: 0 12px;
+            color: #64748b;
+            font-size: 12px
+        }
+
+        @media(max-width:1100px) {
+            main {
+                grid-template-columns: 47% 53%
+            }
+
+            .brand {
+                font-size: 18px
+            }
+
+            .btn {
+                padding: 8px 10px
+            }
+
+            .right {
+                grid-template-rows: 150px minmax(0, 1fr)
+            }
+
+            .code {
+                font-size: 10px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div class="brand">
+                <div class="logo">JS</div><span>Coffee Shop: async/await Execution Visualizer</span>
+            </div>
+            <div class="controls">
+                <button class="btn play" id="play">▶ Play</button><button class="btn pause" id="pause">Ⅱ
+                    Pause</button><button class="btn step" id="step">Step →</button><button class="btn reset"
+                    id="reset">↻ Reset</button>
+                <select id="speed" aria-label="Animation speed">
+                    <option value="0.7">0.7×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                </select>
+            </div>
+        </header>
+        <main>
+            <section class="left">
+                <div class="card editor">
+                    <div class="title"><span>Complete JavaScript Code</span><span id="badge">Ready</span></div>
+                    <pre class="code" id="code"></pre>
+                </div>
+            </section>
+            <section class="right">
+                <div class="card console">
+                    <div class="title"><span>Console Output</span><span id="status">Not started</span></div>
+                    <div class="body" id="console"><span class="muted">Waiting for execution…</span></div>
+                </div>
+                <div class="runtime">
+                    <div class="zone stack">
+                        <h3>Call Stack <span>↓ top</span></h3>
+                        <div id="stack"></div>
+                    </div>
+                    <div class="zone api">
+                        <h3>Runtime / Timers</h3>
+                        <div id="api"></div>
+                    </div>
+                    <div class="zone micro">
+                        <h3>Microtask Queue</h3>
+                        <div id="micro"></div>
+                    </div>
+                    <div class="zone task">
+                        <h3>Task Queue</h3>
+                        <div id="task"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script>
+        const codeLines = [
+            'function placeOrder(drink) {',
+            '  return new Promise(function (resolve, reject) {',
+            '    if (drink === "coffee") {',
+            '      resolve("Order placed for coffee");',
+            '    } else {',
+            '      reject("Sorry, we only serve coffee!");',
+            '    }',
+            '  });',
+            '}',
+            '',
+            'async function serveCustomer() {',
+            '  const order = await placeOrder("coffee");',
+            '  console.log(order);',
+            '',
+            '  const processed = await processOrder(order);',
+            '  console.log(processed);',
+            '',
+            '  const bill = await generateBill(processed);',
+            '  console.log(bill);',
+            '}',
+            '',
+            'serveCustomer();',
+            'function processOrder(orderMessage) {',
+            '  return new Promise(function (resolve) {',
+            '    setTimeout(function () {',
+            '      resolve(orderMessage + " -> processed and served");',
+            '    }, 1500);',
+            '  });',
+            '}',
+            '',
+            'function generateBill(processedMessage) {',
+            '  return new Promise(function (resolve) {',
+            '    setTimeout(function () {',
+            '      resolve(processedMessage + " -> bill generated (Rs 200)");',
+            '    }, 1000);',
+            '  });',
+            '}'
+        ];
+
+        const keywords = new Set(['function', 'return', 'new', 'if', 'else', 'async', 'const', 'await']);
+        const functions = new Set(['placeOrder', 'serveCustomer', 'processOrder', 'generateBill', 'Promise', 'resolve', 'reject', 'setTimeout', 'log']);
+        const objects = new Set(['console']);
+        function paint(line) {
+            const frag = document.createDocumentFragment();
+            const re = /("(?:\\.|[^"\\])*")|\b\d+\b|\b[A-Za-z_$][\w$]*\b/g;
+            let last = 0, m;
+            while ((m = re.exec(line))) {
+                if (m.index > last) frag.append(document.createTextNode(line.slice(last, m.index)));
+                const token = m[0], span = document.createElement('span');
+                if (token.startsWith('"')) span.className = 'str';
+                else if (/^\d+$/.test(token)) span.className = 'num';
+                else if (keywords.has(token)) span.className = 'kw';
+                else if (functions.has(token)) span.className = 'fn';
+                else if (objects.has(token)) span.className = 'obj';
+                span.textContent = token; frag.append(span); last = re.lastIndex;
+            }
+            if (last < line.length) frag.append(document.createTextNode(line.slice(last)));
+            return frag;
+        }
+        const code = document.getElementById('code');
+        codeLines.forEach((text, i) => { const row = document.createElement('div'); row.className = 'line'; row.id = 'line-' + (i + 1); const n = document.createElement('span'); n.className = 'ln'; n.textContent = i + 1; const src = document.createElement('span'); src.className = 'src'; src.appendChild(paint(text || ' ')); row.append(n, src); code.appendChild(row) });
+
+        const steps = [
+            { line: 22, title: 'serveCustomer() is called', text: 'Global code calls the async function. serveCustomer enters the Call Stack.', stack: ['Global Script', 'serveCustomer()'] },
+            { line: 12, title: 'First await calls placeOrder()', text: 'placeOrder("coffee") runs before await can pause anything.', stack: ['Global Script', 'serveCustomer()', 'placeOrder("coffee")'], func: 'place' },
+            { line: 4, title: 'Order Promise is fulfilled', text: 'Because the drink is coffee, resolve() fulfils the Promise immediately.', stack: ['Global Script', 'serveCustomer()', 'placeOrder("coffee")'], vars: { order: 'pending' }, func: 'place' },
+            { line: 12, title: 'await pauses serveCustomer()', text: 'The function leaves the stack. Its continuation is scheduled as a microtask.', stack: ['Global Script'], micro: ['Resume serveCustomer with order'], vars: { order: 'pending' }, func: 'place' },
+            { line: 13, title: 'Order value is received', text: 'The microtask resumes serveCustomer. order receives the fulfilled value and is logged.', stack: ['serveCustomer()'], vars: { order: '"Order placed for coffee"' }, log: 'Order placed for coffee' },
+            { line: 15, title: 'processOrder(order) starts', text: 'processOrder creates a 1500 ms timer. await pauses serveCustomer again.', stack: ['serveCustomer()', 'processOrder(order)'], api: ['Timer: make coffee — 1500 ms'], vars: { order: '"Order placed for coffee"', processed: 'pending' }, func: 'process', progress: 20 },
+            { line: 25, title: 'Coffee is being processed', text: 'The Call Stack is empty while the timer runs in the runtime.', stack: [], api: ['Timer: make coffee — running…'], vars: { order: '"Order placed for coffee"', processed: 'pending' }, func: 'process', progress: 65 },
+            { line: 26, title: 'Processing Promise resolves', text: 'The timer callback calls resolve(). The await continuation enters the Microtask Queue.', stack: [], micro: ['Resume serveCustomer with processed'], vars: { order: '"Order placed for coffee"', processed: 'pending' }, func: 'process', progress: 100 },
+            { line: 16, title: 'Processed value is logged', text: 'The microtask resumes serveCustomer and assigns the processed message.', stack: ['serveCustomer()'], vars: { order: '"Order placed for coffee"', processed: '"…processed and served"' }, log: 'Order placed for coffee -> processed and served' },
+            { line: 18, title: 'generateBill(processed) starts', text: 'A 1000 ms timer begins. serveCustomer pauses at the third await.', stack: ['serveCustomer()', 'generateBill(processed)'], api: ['Timer: generate bill — 1000 ms'], vars: { order: '"Order placed for coffee"', processed: '"…processed and served"', bill: 'pending' }, func: 'bill', progress: 25 },
+            { line: 33, title: 'Bill timer is running', text: 'JavaScript can do other work while the timer runs outside the Call Stack.', stack: [], api: ['Timer: generate bill — running…'], vars: { order: '"Order placed for coffee"', processed: '"…processed and served"', bill: 'pending' }, func: 'bill', progress: 65 },
+            { line: 34, title: 'Bill Promise resolves', text: 'resolve() fulfils the Promise and queues the final continuation as a microtask.', stack: [], micro: ['Resume serveCustomer with bill'], vars: { order: '"Order placed for coffee"', processed: '"…processed and served"', bill: 'pending' }, func: 'bill', progress: 100 },
+            { line: 19, title: 'Bill is logged; function ends', text: 'serveCustomer resumes, prints the bill, then leaves the Call Stack.', stack: ['serveCustomer()'], vars: { order: '"Order placed for coffee"', processed: '"…processed and served"', bill: '"…bill generated (Rs 200)"' }, log: 'Order placed for coffee -> processed and served -> bill generated (Rs 200)' }
+        ];
+        let index = -1, playing = false, timer = null; const $ = id => document.getElementById(id);
+        function list(id, items) { const el = $(id); el.innerHTML = ''; if (!items || !items.length) { el.innerHTML = '<div class="slot empty">(empty)</div>'; return } items.forEach(x => { const d = document.createElement('div'); d.className = 'slot item'; d.textContent = x; el.appendChild(d) }) }
+        function vars(v = {}) { }
+        function clearActive() { document.querySelectorAll('.line').forEach(x => x.classList.remove('active')) }
+        function addLog(msg) { if (!msg) return; if ($('console').querySelector('.muted')) $('console').innerHTML = ''; const d = document.createElement('div'); d.className = 'log'; d.textContent = msg; $('console').appendChild(d) }
+        function timeline() { }
+        function show(i) { if (i < 0 || i >= steps.length) return; index = i; const s = steps[i]; clearActive(); $('line-' + s.line)?.classList.add('active'); $('badge').textContent = 'Line ' + s.line; $('status').textContent = `Step ${i + 1} of ${steps.length}: ${s.title}`; list('stack', s.stack); list('api', s.api); list('micro', s.micro); list('task', s.task); addLog(s.log); $('step').disabled = index === steps.length - 1 }
+        function next() { if (index >= steps.length - 1) { pause(); return } show(index + 1); if (playing) { const speed = parseFloat($('speed').value); const delay = (index === 6 ? 1450 : index === 10 ? 950 : 780) / speed; timer = setTimeout(next, delay) } }
+        function play() { if (playing) return; playing = true; $('play').disabled = true; next() } function pause() { playing = false; clearTimeout(timer); $('play').disabled = false } function reset() { pause(); index = -1; clearActive(); $('badge').textContent = 'Ready'; $('status').textContent = 'Not started'; $('console').innerHTML = '<span class="muted">Waiting for execution…</span>';['stack', 'api', 'micro', 'task'].forEach(x => list(x, [])); $('step').disabled = false }
+        $('play').onclick = play; $('pause').onclick = pause; $('step').onclick = () => { pause(); next() }; $('reset').onclick = reset; reset();
+    </script>
+</body>
+
+</html>
