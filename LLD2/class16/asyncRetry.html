@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Retry with async/await</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: #131b2f;
+            --panel2: #1a243a;
+            --text: #f4f6fb;
+            --muted: #aab4c8;
+            --accent: #a58bff;
+            --success: #5ce0a1;
+            --danger: #ff768c;
+            --wait: #ffc96c
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #242350 0, var(--bg) 48%);
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif
+        }
+
+        .app {
+            width: min(1180px, 95vw);
+            margin: auto;
+            padding: 24px 0 34px
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 18px;
+            margin-bottom: 16px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.55rem, 3vw, 2.35rem)
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--muted)
+        }
+
+        .controls {
+            display: flex;
+            gap: 9px;
+            flex-wrap: wrap
+        }
+
+        button {
+            border: 1px solid #465273;
+            background: #202b45;
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 750;
+            cursor: pointer
+        }
+
+        button:hover {
+            border-color: var(--accent)
+        }
+
+        button:disabled {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .primary {
+            background: var(--accent);
+            color: #161027;
+            border-color: transparent
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1.15fr .85fr;
+            gap: 15px
+        }
+
+        .panel {
+            background: rgba(19, 27, 47, .96);
+            border: 1px solid #303c5a;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, .22)
+        }
+
+        .panel-title {
+            padding: 12px 15px;
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .11em;
+            color: #d2d7e6;
+            border-bottom: 1px solid #303c5a
+        }
+
+        pre {
+            margin: 0;
+            padding: 15px;
+            overflow: auto;
+            font-size: clamp(.7rem, 1.12vw, .86rem);
+            line-height: 1.53;
+            max-height: 650px
+        }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, monospace
+        }
+
+        .line {
+            display: block;
+            padding: 0 7px;
+            border-left: 3px solid transparent;
+            border-radius: 5px;
+            white-space: pre
+        }
+
+        .line.active {
+            background: rgba(165, 139, 255, .13);
+            border-left-color: var(--accent)
+        }
+
+        .visual {
+            padding: 18px;
+            min-height: 450px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 13px
+        }
+
+        .attempts {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px
+        }
+
+        .attempt {
+            min-height: 110px;
+            border: 1px solid #354661;
+            background: var(--panel2);
+            border-radius: 13px;
+            padding: 13px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between
+        }
+
+        .attempt strong {
+            font-size: .95rem
+        }
+
+        .attempt span {
+            color: var(--muted);
+            font-size: .82rem
+        }
+
+        .attempt.running {
+            border-color: var(--accent);
+            transform: translateY(-3px)
+        }
+
+        .attempt.failed {
+            border-color: var(--danger);
+            background: rgba(255, 118, 140, .07)
+        }
+
+        .attempt.success {
+            border-color: var(--success);
+            background: rgba(92, 224, 161, .08)
+        }
+
+        .status-icon {
+            font-size: 1.55rem;
+            font-weight: 900
+        }
+
+        .failed .status-icon {
+            color: var(--danger)
+        }
+
+        .success .status-icon {
+            color: var(--success)
+        }
+
+        .wait-row {
+            min-height: 55px;
+            border: 1px dashed #475a78;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 13px;
+            color: var(--muted)
+        }
+
+        .wait-row.active {
+            border-color: var(--wait);
+            color: var(--wait);
+            background: rgba(255, 201, 108, .06)
+        }
+
+        .wait-track {
+            flex: 1;
+            height: 8px;
+            background: #0a1322;
+            border-radius: 999px;
+            overflow: hidden
+        }
+
+        .wait-bar {
+            height: 100%;
+            width: 0;
+            background: var(--wait);
+            border-radius: inherit
+        }
+
+        .final {
+            min-height: 76px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            border-radius: 13px;
+            border: 1px dashed #435570;
+            padding: 12px;
+            font-weight: 850
+        }
+
+        .final.success {
+            color: var(--success);
+            border-color: rgba(92, 224, 161, .55);
+            background: rgba(92, 224, 161, .07)
+        }
+
+        .console {
+            grid-column: 1/-1
+        }
+
+        .console-body {
+            min-height: 150px;
+            padding: 14px 16px;
+            font: 14px/1.63 "SFMono-Regular", Consolas, monospace;
+            color: #dce4f2
+        }
+
+        .console-line:before {
+            content: "> ";
+            color: var(--accent)
+        }
+
+        .note {
+            margin-top: 13px;
+            text-align: center;
+            color: var(--muted);
+            font-size: .9rem
+        }
+
+        @media(max-width:850px) {
+            header {
+                align-items: flex-start;
+                flex-direction: column
+            }
+
+            .layout {
+                grid-template-columns: 1fr
+            }
+
+            .console {
+                grid-column: auto
+            }
+
+            pre {
+                max-height: none
+            }
+        }
+
+        @media(max-width:520px) {
+            .attempts {
+                grid-template-columns: 1fr
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div>
+                <h1>Retry with async/await</h1>
+                <p class="subtitle">Move manually through failure, waiting, a fresh promise, and eventual success.</p>
+            </div>
+            <div class="controls"><button id="backBtn">← Back</button><button id="nextBtn" class="primary">Next
+                    →</button><button id="resetBtn">Reset</button></div>
+        </header>
+        <main class="layout">
+            <section class="panel">
+                <div class="panel-title">Exact JavaScript code</div>
+                <pre><code>
+<span class="line" data-line="1">async function retry(fn, retries = 3, delay = 1000) {</span>
+<span class="line" data-line="2">  for (let attempt = 1; attempt &lt;= retries; attempt++) {</span>
+<span class="line" data-line="3">    try {</span>
+<span class="line" data-line="4">      console.log(`  Attempt ${attempt}...`);</span>
+<span class="line" data-line="5">      const result = await fn();</span>
+<span class="line" data-line="6">      console.log(`  Succeeded on attempt ${attempt}`);</span>
+<span class="line" data-line="7">      return result;</span>
+<span class="line" data-line="8">    } catch (error) {</span>
+<span class="line" data-line="9">      console.log(`  Attempt ${attempt} failed: ${error.message}`);</span>
+<span class="line" data-line="10">      if (attempt === retries) {</span>
+<span class="line" data-line="11">        throw new Error(</span>
+<span class="line" data-line="12">          `Failed after ${retries} attempts. Last error: ${error.message}`</span>
+<span class="line" data-line="13">        );</span>
+<span class="line" data-line="14">      }</span>
+<span class="line" data-line="15">      console.log(`  Waiting ${delay}ms before retry...`);</span>
+<span class="line" data-line="16">      await new Promise(resolve =&gt; setTimeout(resolve, delay));</span>
+<span class="line" data-line="17">    }</span>
+<span class="line" data-line="18">  }</span>
+<span class="line" data-line="19">}</span>
+<span class="line" data-line="20"></span>
+<span class="line" data-line="21">function createFlakyOperation() {</span>
+<span class="line" data-line="22">  let callCount = 0;</span>
+<span class="line" data-line="23">  return function () {</span>
+<span class="line" data-line="24">    callCount++;</span>
+<span class="line" data-line="25">    if (callCount &lt;= 2) {</span>
+<span class="line" data-line="26">      return simulateAsync(`Call-${callCount}`, 300, true);</span>
+<span class="line" data-line="27">    }</span>
+<span class="line" data-line="28">    return simulateAsync(`Call-${callCount}`, 300, false);</span>
+<span class="line" data-line="29">  };</span>
+<span class="line" data-line="30">}</span>
+<span class="line" data-line="31"></span>
+<span class="line" data-line="32">async function demoRetry() {</span>
+<span class="line" data-line="33">  console.log("--- Retry Pattern ---");</span>
+<span class="line" data-line="34"></span>
+<span class="line" data-line="35">  const flakyOp = createFlakyOperation();</span>
+<span class="line" data-line="36"></span>
+<span class="line" data-line="37">  try {</span>
+<span class="line" data-line="38">    const result = await retry(flakyOp, 5, 500);</span>
+<span class="line" data-line="39">    console.log("Final result:", result);</span>
+<span class="line" data-line="40">  } catch (error) {</span>
+<span class="line" data-line="41">    console.log("Gave up:", error.message);</span>
+<span class="line" data-line="42">  }</span>
+<span class="line" data-line="43">}</span>
+<span class="line" data-line="44"></span>
+<span class="line" data-line="45">demoRetry();</span>
+</code></pre>
+            </section>
+            <section class="panel">
+                <div class="panel-title">Attempt flow</div>
+                <div class="visual">
+                    <div class="attempts">
+                        <div class="attempt" id="attempt1"><strong>Attempt 1</strong>
+                            <div class="status-icon">•</div><span>not started</span>
+                        </div>
+                        <div class="attempt" id="attempt2"><strong>Attempt 2</strong>
+                            <div class="status-icon">•</div><span>not started</span>
+                        </div>
+                        <div class="attempt" id="attempt3"><strong>Attempt 3</strong>
+                            <div class="status-icon">•</div><span>not started</span>
+                        </div>
+                    </div>
+                    <div class="wait-row" id="waitRow"><strong>Pause before retry</strong>
+                        <div class="wait-track">
+                            <div class="wait-bar" id="waitBar"></div>
+                        </div><span id="waitText">idle</span>
+                    </div>
+                    <div class="final" id="finalBox">Press “Next” to begin</div>
+                </div>
+            </section>
+            <section class="panel console">
+                <div class="panel-title">Console</div>
+                <div class="console-body" id="consoleBody">
+                    <div class="console-line">Ready.</div>
+                </div>
+            </section>
+        </main>
+        <div class="note">A function is passed to retry so each attempt can call it and create a fresh promise.</div>
+    </div>
+    <script>
+        const $ = id => document.getElementById(id), lines = [...document.querySelectorAll('.line')], attempts = [1, 2, 3].map(n => $(`attempt${n}`)); let step = 0; const maxStep = 11;
+        function active(nums = []) { lines.forEach(l => l.classList.toggle('active', nums.includes(Number(l.dataset.line)))) } function setAttempt(i, state, text, icon) { const c = attempts[i - 1]; c.className = `attempt ${state || ''}`; c.querySelector('.status-icon').textContent = icon; c.querySelector('span').textContent = text }
+        function render() {
+            attempts.forEach((_, i) => setAttempt(i + 1, '', 'not started', '•')); $('waitRow').className = 'wait-row'; $('waitText').textContent = 'idle'; $('waitBar').style.width = '0%'; $('finalBox').className = 'final'; $('finalBox').textContent = 'Press “Next” to begin'; active([]); const logs = [];
+            if (step >= 1) { active([45, 33]); logs.push('--- Retry Pattern ---'); $('finalBox').textContent = 'demoRetry() starts' }
+            if (step >= 2) { active([35]); logs.push('flakyOp function is created.'); $('finalBox').textContent = 'The closure starts with callCount = 0' }
+            if (step >= 3) { active([38, 1, 2, 4, 5, 24, 25, 26]); setAttempt(1, 'running', 'Call-1 pending', '…'); logs.push('  Attempt 1...') }
+            if (step >= 4) { active([8, 9]); setAttempt(1, 'failed', 'Call-1 failed', '×'); logs.push('  Attempt 1 failed: Call-1 failed') }
+            if (step >= 5) { active([15, 16]); $('waitRow').classList.add('active'); $('waitText').textContent = '500ms'; $('waitBar').style.width = '100%'; logs.push('  Waiting 500ms before retry...') }
+            if (step >= 6) { active([2, 4, 5, 24, 25, 26]); setAttempt(1, 'failed', 'Call-1 failed', '×'); setAttempt(2, 'running', 'Call-2 pending', '…'); $('waitText').textContent = 'done'; logs.push('  Attempt 2...') }
+            if (step >= 7) { active([8, 9]); setAttempt(1, 'failed', 'Call-1 failed', '×'); setAttempt(2, 'failed', 'Call-2 failed', '×'); logs.push('  Attempt 2 failed: Call-2 failed') }
+            if (step >= 8) { active([15, 16]); setAttempt(1, 'failed', 'Call-1 failed', '×'); setAttempt(2, 'failed', 'Call-2 failed', '×'); $('waitRow').classList.add('active'); $('waitText').textContent = '500ms'; $('waitBar').style.width = '100%'; logs.push('  Waiting 500ms before retry...') }
+            if (step >= 9) { active([2, 4, 5, 24, 25, 28]); setAttempt(1, 'failed', 'Call-1 failed', '×'); setAttempt(2, 'failed', 'Call-2 failed', '×'); setAttempt(3, 'running', 'Call-3 pending', '…'); $('waitText').textContent = 'done'; logs.push('  Attempt 3...') }
+            if (step >= 10) { active([6, 7]); setAttempt(1, 'failed', 'Call-1 failed', '×'); setAttempt(2, 'failed', 'Call-2 failed', '×'); setAttempt(3, 'success', 'Call-3 completed', '✓'); $('finalBox').className = 'final success'; $('finalBox').textContent = 'Attempt 3 succeeds and retry() returns'; logs.push('  Succeeded on attempt 3') }
+            if (step >= 11) { active([39]); setAttempt(1, 'failed', 'Call-1 failed', '×'); setAttempt(2, 'failed', 'Call-2 failed', '×'); setAttempt(3, 'success', 'Call-3 completed', '✓'); $('finalBox').className = 'final success'; $('finalBox').textContent = 'Final result received'; logs.push('Final result: Call-3 completed in 300ms') }
+            $('consoleBody').innerHTML = logs.length ? logs.map(x => `<div class="console-line">${x}</div>`).join('') : '<div class="console-line">Ready.</div>'; $('backBtn').disabled = step === 0; $('nextBtn').disabled = step === maxStep
+        }
+        $('backBtn').onclick = () => { if (step > 0) { step--; render() } }; $('nextBtn').onclick = () => { if (step < maxStep) { step++; render() } }; $('resetBtn').onclick = () => { step = 0; render() }; render();
+    </script>
+</body>
+
+</html>
