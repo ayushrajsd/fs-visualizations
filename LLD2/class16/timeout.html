@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeout with Promise.race</title>
+    <style>
+        :root {
+            --bg: #08111f;
+            --panel: #101c2d;
+            --panel2: #16243a;
+            --text: #f4f7fb;
+            --muted: #9fb0c7;
+            --accent: #62d8ff;
+            --success: #57e39b;
+            --danger: #ff7185;
+            --line: #2b405c
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #132642 0, var(--bg) 48%);
+            color: var(--text);
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif
+        }
+
+        .app {
+            width: min(1180px, 95vw);
+            margin: auto;
+            padding: 24px 0 34px
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 18px;
+            margin-bottom: 16px
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.55rem, 3vw, 2.35rem)
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--muted)
+        }
+
+        .controls {
+            display: flex;
+            gap: 9px;
+            flex-wrap: wrap
+        }
+
+        button {
+            border: 1px solid #36506e;
+            background: #172941;
+            color: var(--text);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-weight: 750;
+            cursor: pointer
+        }
+
+        button:hover {
+            border-color: var(--accent)
+        }
+
+        button:disabled {
+            opacity: .4;
+            cursor: not-allowed
+        }
+
+        .primary {
+            background: var(--accent);
+            color: #052031;
+            border-color: transparent
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1.15fr .85fr;
+            gap: 15px
+        }
+
+        .panel {
+            background: rgba(16, 28, 45, .96);
+            border: 1px solid #243955;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, .22)
+        }
+
+        .panel-title {
+            padding: 12px 15px;
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .11em;
+            color: #c7d7ea;
+            border-bottom: 1px solid #243955
+        }
+
+        pre {
+            margin: 0;
+            padding: 15px;
+            overflow: auto;
+            font-size: clamp(.72rem, 1.18vw, .88rem);
+            line-height: 1.55;
+            max-height: 610px
+        }
+
+        code {
+            font-family: "SFMono-Regular", Consolas, monospace
+        }
+
+        .line {
+            display: block;
+            padding: 0 7px;
+            border-left: 3px solid transparent;
+            border-radius: 5px;
+            white-space: pre
+        }
+
+        .line.active {
+            background: rgba(98, 216, 255, .12);
+            border-left-color: var(--accent)
+        }
+
+        .kw {
+            color: #d69cff
+        }
+
+        .fn {
+            color: #7fd8ff
+        }
+
+        .str {
+            color: #a9e58b
+        }
+
+        .num {
+            color: #ffd37d
+        }
+
+        .visual {
+            padding: 18px;
+            min-height: 430px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 14px
+        }
+
+        .case-title {
+            text-align: center;
+            color: var(--muted);
+            font-weight: 800
+        }
+
+        .lane {
+            background: var(--panel2);
+            border: 1px solid #2d4564;
+            border-radius: 13px;
+            padding: 14px
+        }
+
+        .lane-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px
+        }
+
+        .lane-name {
+            font-weight: 800
+        }
+
+        .lane-state {
+            font-size: .8rem;
+            color: var(--muted)
+        }
+
+        .track {
+            height: 13px;
+            background: #0a1525;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid #223852
+        }
+
+        .bar {
+            height: 100%;
+            width: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #3abaf1, #76e5ff);
+            transition: width .25s
+        }
+
+        .timeout .bar {
+            background: linear-gradient(90deg, #ff9b68, #ff7185)
+        }
+
+        .winner {
+            border-color: var(--success);
+            box-shadow: 0 0 0 2px rgba(87, 227, 155, .1)
+        }
+
+        .timeout.winner {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 2px rgba(255, 113, 133, .1)
+        }
+
+        .loser {
+            opacity: .55
+        }
+
+        .result {
+            min-height: 78px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            border: 1px dashed #38516f;
+            border-radius: 13px;
+            padding: 12px;
+            font-weight: 850
+        }
+
+        .result.success {
+            color: var(--success);
+            border-color: rgba(87, 227, 155, .55);
+            background: rgba(87, 227, 155, .07)
+        }
+
+        .result.error {
+            color: var(--danger);
+            border-color: rgba(255, 113, 133, .55);
+            background: rgba(255, 113, 133, .07)
+        }
+
+        .console {
+            grid-column: 1/-1
+        }
+
+        .console-body {
+            min-height: 140px;
+            padding: 14px 16px;
+            font: 14px/1.65 "SFMono-Regular", Consolas, monospace;
+            color: #d8e5f3
+        }
+
+        .console-line:before {
+            content: "> ";
+            color: var(--accent)
+        }
+
+        .note {
+            margin-top: 13px;
+            text-align: center;
+            color: var(--muted);
+            font-size: .9rem
+        }
+
+        @media(max-width:850px) {
+            header {
+                align-items: flex-start;
+                flex-direction: column
+            }
+
+            .layout {
+                grid-template-columns: 1fr
+            }
+
+            .console {
+                grid-column: auto
+            }
+
+            pre {
+                max-height: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div>
+                <h1>Timeout with Promise.race</h1>
+                <p class="subtitle">Use Back and Next to inspect both real-world cases manually.</p>
+            </div>
+            <div class="controls"><button id="fastBtn" class="primary">Case 1: Fast</button><button id="slowBtn">Case 2:
+                    Slow</button><button id="backBtn">← Back</button><button id="nextBtn">Next →</button><button
+                    id="resetBtn">Reset</button></div>
+        </header>
+        <main class="layout">
+            <section class="panel">
+                <div class="panel-title">Exact JavaScript code</div>
+                <pre><code>
+<span class="line" data-lines="1">function withTimeout(promise, ms) {</span>
+<span class="line" data-lines="2">  const timeout = new Promise((_, reject) =&gt; {</span>
+<span class="line" data-lines="3">    setTimeout(() =&gt; {</span>
+<span class="line" data-lines="4">      reject(new Error(`Operation timed out after ${ms}ms`));</span>
+<span class="line" data-lines="5">    }, ms);</span>
+<span class="line" data-lines="6">  });</span>
+<span class="line" data-lines="7"></span>
+<span class="line" data-lines="8">  return Promise.race([promise, timeout]);</span>
+<span class="line" data-lines="9">}</span>
+<span class="line" data-lines="10"></span>
+<span class="line" data-lines="11">async function demoTimeout() {</span>
+<span class="line" data-lines="12">  console.log("--- Timeout Pattern ---");</span>
+<span class="line" data-lines="13"></span>
+<span class="line" data-lines="14">  try {</span>
+<span class="line" data-lines="15">    const result = await withTimeout(</span>
+<span class="line" data-lines="16">      simulateAsync("Fast Read", 1000),</span>
+<span class="line" data-lines="17">      2000</span>
+<span class="line" data-lines="18">    );</span>
+<span class="line" data-lines="19">    console.log("Case 1 (fast):", result);</span>
+<span class="line" data-lines="20">  } catch (error) {</span>
+<span class="line" data-lines="21">    console.log("Case 1 error:", error.message);</span>
+<span class="line" data-lines="22">  }</span>
+<span class="line" data-lines="23"></span>
+<span class="line" data-lines="24">  try {</span>
+<span class="line" data-lines="25">    const result = await withTimeout(</span>
+<span class="line" data-lines="26">      simulateAsync("Slow Read", 5000),</span>
+<span class="line" data-lines="27">      2000</span>
+<span class="line" data-lines="28">    );</span>
+<span class="line" data-lines="29">    console.log("Case 2 (slow):", result);</span>
+<span class="line" data-lines="30">  } catch (error) {</span>
+<span class="line" data-lines="31">    console.log("Case 2 error:", error.message);</span>
+<span class="line" data-lines="32">  }</span>
+<span class="line" data-lines="33">}</span>
+<span class="line" data-lines="34"></span>
+<span class="line" data-lines="35">demoTimeout();</span>
+</code></pre>
+            </section>
+            <section class="panel">
+                <div class="panel-title">Visual execution</div>
+                <div class="visual">
+                    <div class="case-title" id="caseTitle"></div>
+                    <div class="lane" id="operationLane">
+                        <div class="lane-head"><span class="lane-name" id="operationName">Operation</span><span
+                                class="lane-state" id="operationState">waiting</span></div>
+                        <div class="track">
+                            <div class="bar" id="operationBar"></div>
+                        </div>
+                    </div>
+                    <div class="lane timeout" id="timeoutLane">
+                        <div class="lane-head"><span class="lane-name">Timeout promise — 2000ms</span><span
+                                class="lane-state" id="timeoutState">waiting</span></div>
+                        <div class="track">
+                            <div class="bar" id="timeoutBar"></div>
+                        </div>
+                    </div>
+                    <div class="result" id="resultBox">Press “Next” to begin</div>
+                </div>
+            </section>
+            <section class="panel console">
+                <div class="panel-title">Console</div>
+                <div class="console-body" id="consoleBody">
+                    <div class="console-line">Ready.</div>
+                </div>
+            </section>
+        </main>
+        <div class="note">Promise.race settles with the first promise to settle. The losing promise keeps running; it is
+            not cancelled.</div>
+    </div>
+    <script>
+        const $ = id => document.getElementById(id), lines = [...document.querySelectorAll('.line')];
+        const fastBtn = $('fastBtn'), slowBtn = $('slowBtn'), backBtn = $('backBtn'), nextBtn = $('nextBtn'), resetBtn = $('resetBtn');
+        let mode = 'fast', step = 0; const maxStep = 6;
+        function highlight(nums = []) { lines.forEach(l => l.classList.toggle('active', nums.includes(Number(l.dataset.lines)))) }
+        function selectMode(nextMode) { mode = nextMode; step = 0; fastBtn.classList.toggle('primary', mode === 'fast'); slowBtn.classList.toggle('primary', mode === 'slow'); render() }
+        function render() {
+            const fast = mode === 'fast', opTime = fast ? 1000 : 5000;
+            $('caseTitle').textContent = fast ? 'Case 1 — operation finishes before deadline' : 'Case 2 — deadline finishes before operation';
+            $('operationName').textContent = fast ? 'Fast Read — 1000ms' : 'Slow Read — 5000ms';
+            $('operationLane').className = 'lane'; $('timeoutLane').className = 'lane timeout'; $('operationBar').style.width = '0%'; $('timeoutBar').style.width = '0%'; $('operationState').textContent = 'waiting'; $('timeoutState').textContent = 'waiting'; $('resultBox').className = 'result'; $('resultBox').textContent = 'Press “Next” to begin'; highlight([]);
+            const logs = [];
+            if (step >= 1) { highlight([35, 12]); logs.push('--- Timeout Pattern ---'); $('resultBox').textContent = fast ? 'Starting Case 1' : 'Starting Case 2' }
+            if (step >= 2) { highlight(fast ? [15, 16, 17, 18] : [25, 26, 27, 28]); $('operationState').textContent = 'promise created'; logs.push(`${fast ? 'Fast Read' : 'Slow Read'} promise starts (${opTime}ms).`) }
+            if (step >= 3) { highlight([2, 3, 4, 5, 6]); $('timeoutState').textContent = 'promise created'; logs.push('Timeout promise starts (2000ms).') }
+            if (step >= 4) { highlight([8]); $('operationState').textContent = 'pending'; $('timeoutState').textContent = 'pending'; $('operationBar').style.width = fast ? '70%' : '35%'; $('timeoutBar').style.width = fast ? '40%' : '70%'; $('resultBox').textContent = 'Promise.race is waiting for the first settlement'; logs.push('Promise.race([promise, timeout]) begins.') }
+            if (step >= 5) { if (fast) { highlight([19]); $('operationBar').style.width = '100%'; $('timeoutBar').style.width = '50%'; $('operationState').textContent = 'fulfilled first'; $('timeoutState').textContent = 'still pending'; $('operationLane').classList.add('winner'); $('timeoutLane').classList.add('loser'); $('resultBox').className = 'result success'; $('resultBox').textContent = 'Fast Read wins the race'; logs.push('Fast Read completes in 1000ms.') } else { highlight([4, 30, 31]); $('operationBar').style.width = '40%'; $('timeoutBar').style.width = '100%'; $('operationState').textContent = 'still pending'; $('timeoutState').textContent = 'rejected first'; $('timeoutLane').classList.add('winner'); $('operationLane').classList.add('loser'); $('resultBox').className = 'result error'; $('resultBox').textContent = 'Timeout promise wins the race'; logs.push('Timeout rejects after 2000ms.') } }
+            if (step >= 6) { if (fast) { highlight([19]); logs.push('Case 1 (fast): Fast Read completed in 1000ms'); $('timeoutState').textContent = 'losing promise ignored' } else { highlight([31]); logs.push('Case 2 error: Operation timed out after 2000ms'); $('operationState').textContent = 'continues in background' } }
+            $('consoleBody').innerHTML = logs.length ? logs.map(x => `<div class="console-line">${x}</div>`).join('') : '<div class="console-line">Ready.</div>'; backBtn.disabled = step === 0; nextBtn.disabled = step === maxStep
+        }
+        fastBtn.onclick = () => selectMode('fast'); slowBtn.onclick = () => selectMode('slow'); backBtn.onclick = () => { if (step > 0) { step--; render() } }; nextBtn.onclick = () => { if (step < maxStep) { step++; render() } }; resetBtn.onclick = () => { step = 0; render() }; render();
+    </script>
+</body>
+
+</html>
