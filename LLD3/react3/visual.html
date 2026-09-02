@@ -22,7 +22,6 @@
       flex-direction: column;
     }
 
-    /* ── NAV TABS ── */
     .tab-nav {
       display: flex;
       justify-content: center;
@@ -56,7 +55,6 @@
       border-color: #58a6ff;
     }
 
-    /* ── TAB CONTENT ── */
     .tab-content {
       display: none;
       flex: 1;
@@ -75,7 +73,6 @@
       position: relative;
     }
 
-    /* ── BOTTOM BAR ── */
     .bottom-bar {
       flex-shrink: 0;
       background: #161b22;
@@ -160,10 +157,12 @@
       font-family: 'Courier New', monospace;
     }
 
-    /* ═══════════════════════════════════════
-     VISUAL 1: PICTURE FRAME
-     ═══════════════════════════════════════ */
+    .narration .bad-hl {
+      color: #f85149;
+      font-family: 'Courier New', monospace;
+    }
 
+    /* ═══ TAB 1 ═══ */
     .left-pane {
       width: 40%;
       padding: 1.2rem 1rem 1.2rem 1.5rem;
@@ -243,7 +242,6 @@
       font-weight: 700;
     }
 
-    /* Right pane */
     .right-pane {
       flex: 1;
       padding: 1.2rem 1.5rem;
@@ -372,7 +370,6 @@
       margin: 0.2rem 0;
     }
 
-    /* Takeaway overlay */
     .takeaway-overlay {
       position: absolute;
       top: 0;
@@ -416,171 +413,52 @@
       font-family: 'Courier New', monospace;
     }
 
-    /* ═══════════════════════════════════════
-     VISUAL 2: KEYS
-     ═══════════════════════════════════════ */
+    /* ═══ TAB 2: KEYS ═══ */
 
-    .keys-main {
+    .keys-stage {
       flex: 1;
       display: flex;
-      overflow: hidden;
       position: relative;
+      overflow: hidden;
     }
 
     .keys-half {
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 1.2rem 1.5rem;
-      overflow: hidden;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 2rem;
+      gap: 1rem;
     }
 
-    .keys-half.bad {
+    .keys-half:first-child {
       border-right: 1px solid #21262d;
     }
 
-    .keys-half h3 {
-      font-size: 1.15rem;
-      margin-bottom: 0.25rem;
+    .half-title {
+      font-size: 1.2rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      color: #f0f6fc;
     }
 
-    .keys-half .panel-sub {
-      font-size: 0.82rem;
-      color: #484f58;
-      margin-bottom: 0.8rem;
-    }
-
-    .keys-columns {
-      flex: 1;
-      display: flex;
-      gap: 1.2rem;
-      overflow: hidden;
-    }
-
-    .keys-col {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .state-label {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: #484f58;
-      margin-bottom: 0.5rem;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    .state-label.visible {
-      opacity: 1;
-    }
-
-    .row-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-
-    .item-row {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-      padding: 0.55rem 0.75rem;
-      border-radius: 6px;
-      background: #161b22;
-      border: 1px solid #21262d;
-      transition: all 0.5s ease;
-      overflow: hidden;
-    }
-
-    .item-row.highlight-row {
-      border-color: #30363d;
-      background: #1c2128;
-    }
-
-    .item-row.removing {
-      opacity: 0;
-      transform: translateX(20px);
-      max-height: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-      margin-bottom: -0.4rem;
-      border-width: 0;
-    }
-
-    .item-row .key-badge {
-      font-family: 'Courier New', monospace;
-      font-size: 0.82rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      min-width: 58px;
-      text-align: center;
-      font-weight: 700;
-      background: #21262d;
-      color: #8b949e;
-      border: 1px solid #30363d;
-    }
-
-    .item-row .product-name {
-      font-size: 0.95rem;
-      flex: 1;
-      color: #c9d1d9;
-    }
-
-    .item-row .identity-arrow {
-      font-size: 0.78rem;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      white-space: nowrap;
-    }
-
-    .item-row .identity-arrow.show {
-      opacity: 1;
-    }
-
-    .item-row .identity-arrow.confused {
+    .keys-half.bad .half-title {
       color: #f85149;
     }
 
-    .item-row .identity-arrow.correct {
-      color: #58a6ff;
+    .keys-half.good .half-title {
+      color: #3fb950;
     }
 
-    .mismatch-callout {
-      margin-top: 0.7rem;
-      padding: 0.65rem 0.8rem;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      opacity: 0;
-      transform: translateY(6px);
-      transition: all 0.4s ease;
+    .half-sub {
+      font-size: 0.9rem;
+      color: #484f58;
+      margin-top: -0.5rem;
     }
 
-    .mismatch-callout.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .bad .mismatch-callout {
-      background: #f8514912;
-      border: 1px solid #f8514933;
-      color: #f85149;
-    }
-
-    .good .mismatch-callout {
-      background: #58a6ff12;
-      border: 1px solid #58a6ff33;
-      color: #58a6ff;
-    }
-
-    .vs-divider {
+    .vs-badge {
       position: absolute;
       top: 50%;
       left: 50%;
@@ -588,36 +466,226 @@
       background: #0d1117;
       border: 1px solid #30363d;
       border-radius: 50%;
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 700;
       color: #484f58;
       z-index: 5;
+    }
+
+    /* Card list */
+    .card-list {
+      width: 100%;
+      max-width: 360px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      transform: translateY(8px);
+    }
+
+    .card-list.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .cl-header {
+      padding: 0.6rem 1rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #484f58;
+      border-bottom: 1px solid #21262d;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: center;
+      padding: 0.7rem 1rem;
+      gap: 0.8rem;
+      font-size: 1.05rem;
+      border-bottom: 1px solid #21262d15;
+      transition: all 0.5s ease;
+    }
+
+    .item-row:last-child {
+      border-bottom: none;
+    }
+
+    .item-row .ir-key {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 5px;
+      background: #21262d;
+      color: #8b949e;
+      border: 1px solid #30363d;
+      min-width: 60px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .item-row .ir-emoji {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .item-row .ir-name {
+      flex: 1;
+      color: #f0f6fc;
+    }
+
+    .item-row .ir-tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.15rem 0.6rem;
+      border-radius: 5px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .ir-tag.visible {
+      opacity: 1;
+    }
+
+    .ir-tag.ok {
+      background: #3fb95020;
+      color: #3fb950;
+    }
+
+    .ir-tag.wrong {
+      background: #f8514920;
+      color: #f85149;
+    }
+
+    .ir-tag.gone {
+      background: #f8514920;
+      color: #f85149;
+    }
+
+    .item-row.highlight-del {
+      background: #f8514912;
+      border-left: 3px solid #f85149;
+    }
+
+    .item-row.row-faded {
+      opacity: 0;
+      max-height: 0;
+      padding: 0 1rem;
+      overflow: hidden;
+    }
+
+    .item-row.row-wrong {
+      background: #f8514908;
+    }
+
+    .item-row.row-ok {
+      background: #3fb95008;
+    }
+
+    /* Result label */
+    .result-label {
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 0.7rem 1.2rem;
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      max-width: 360px;
+      width: 100%;
+      line-height: 1.5;
+    }
+
+    .result-label.visible {
+      opacity: 1;
+    }
+
+    .keys-half.bad .result-label {
+      background: #f8514910;
+      border: 1px solid #f8514925;
+      color: #ffa198;
+    }
+
+    .keys-half.good .result-label {
+      background: #3fb95010;
+      border: 1px solid #3fb95025;
+      color: #7ee787;
+    }
+
+    /* Takeaway */
+    .keys-takeaway {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #0d1117ee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 10;
+    }
+
+    .keys-takeaway.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .kt-box {
+      padding: 2.5rem 3rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      max-width: 620px;
+      text-align: center;
+      font-size: 1.15rem;
+      line-height: 2;
+      color: #c9d1d9;
+    }
+
+    .kt-box strong {
+      color: #f0f6fc;
+    }
+
+    .kt-box .code {
+      color: #58a6ff;
+      font-family: 'Courier New', monospace;
+    }
+
+    .kt-box .bad-code {
+      color: #f85149;
+      font-family: 'Courier New', monospace;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- ── TAB NAVIGATION ── -->
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="frame">1 · Picture Frame (children)</button>
-    <button class="tab-btn" data-tab="keys">2 · Index vs ID Keys</button>
+    <button class="tab-btn" data-tab="keys">2 · Why Keys Matter</button>
   </nav>
 
-  <!-- ═══════════════════════════════════════════
-     TAB 1: PICTURE FRAME
-     ═══════════════════════════════════════════ -->
+  <!-- ═══ TAB 1 ═══ -->
   <section class="tab-content active" id="tab-frame">
     <div class="main-area">
-
       <div class="left-pane">
         <div class="pane-title">App.jsx</div>
-        <div class="code-panel" id="codePanel">
+        <div class="code-panel">
           <div class="code-line" data-step="1"><span class="ck">function</span> <span class="cn">Section</span><span
               class="cb">({ </span><span class="cp">title</span>, <span class="cp">children</span><span class="cb"> })
               {</span></div>
@@ -651,12 +719,10 @@
           <div class="code-line" data-step="4"><span class="ct">&lt;/Section&gt;</span></div>
         </div>
       </div>
-
       <div class="right-pane">
-        <div class="visual-frame frame-1" id="vf1">
+        <div class="visual-frame" id="vf1">
           <div class="frame-header">Featured Items</div>
-          <div class="frame-body">
-            <span class="children-label">children</span>
+          <div class="frame-body"><span class="children-label">children</span>
             <div class="mini-card" id="mc1"><span class="mc-icon">🖱️</span><span class="mc-text">Wireless
                 Mouse</span><span class="mc-price">₹599</span></div>
             <div class="mini-card" id="mc2"><span class="mc-icon">⌨️</span><span class="mc-text">Mechanical
@@ -665,20 +731,16 @@
                 class="mc-price">₹349</span></div>
           </div>
         </div>
-
-        <div class="visual-frame frame-2" id="vf2">
+        <div class="visual-frame" id="vf2">
           <div class="frame-header">About Us</div>
-          <div class="frame-body">
-            <span class="children-label">children</span>
+          <div class="frame-body"><span class="children-label">children</span>
             <p class="about-text" id="aboutText">We sell the best tech gear at unbeatable prices. Quality guaranteed
               since 2020.</p>
           </div>
         </div>
-
-        <div class="visual-frame frame-3" id="vf3">
+        <div class="visual-frame" id="vf3">
           <div class="frame-header">Contact</div>
-          <div class="frame-body">
-            <span class="children-label">children</span>
+          <div class="frame-body"><span class="children-label">children</span>
             <div class="contact-content" id="contactContent">
               <div class="contact-icon">✉️</div>
               <div class="contact-line">hello@techshop.com</div>
@@ -687,18 +749,12 @@
           </div>
         </div>
       </div>
-
       <div class="takeaway-overlay" id="takeawayOverlay">
-        <div class="takeaway-box">
-          <strong>The frame never changes.</strong><br />
-          <span class="code">&lt;Section&gt;</span> provides the title and wrapper every time.<br />
-          <span class="code">children</span> is different each time.<br /><br />
-          One component. Three uses. <strong>That's composition.</strong>
-        </div>
+        <div class="takeaway-box"><strong>The frame never changes.</strong><br><span class="code">&lt;Section&gt;</span>
+          provides the title and wrapper every time.<br><span class="code">children</span> is different each
+          time.<br><br>One component. Three uses. <strong>That's composition.</strong></div>
       </div>
-
     </div>
-
     <div class="bottom-bar">
       <div class="player-controls">
         <button class="p-btn" id="f-prev">⏮</button>
@@ -710,74 +766,94 @@
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════════════
-     TAB 2: KEYS
-     ═══════════════════════════════════════════ -->
+  <!-- ═══ TAB 2: KEYS ═══ -->
   <section class="tab-content" id="tab-keys">
-    <div class="keys-main">
+    <div class="main-area" style="flex-direction:column;">
+      <div class="keys-stage">
 
-      <div class="keys-half bad">
-        <h3>🔴 &nbsp;key = {index}</h3>
-        <p class="panel-sub">Array index shifts when items are removed</p>
-        <div class="keys-columns">
-          <div class="keys-col">
-            <div class="state-label visible">Before</div>
-            <div class="row-list" id="badBefore">
-              <div class="item-row"><span class="key-badge">key=0</span><span class="product-name">Mouse</span></div>
-              <div class="item-row"><span class="key-badge">key=1</span><span
-                  class="product-name"><strong>Keyboard</strong></span></div>
-              <div class="item-row"><span class="key-badge">key=2</span><span class="product-name">Hub</span></div>
-              <div class="item-row"><span class="key-badge">key=3</span><span class="product-name">Stand</span></div>
-            </div>
-          </div>
-          <div class="keys-col">
-            <div class="state-label" id="badAfterLabel">After</div>
-            <div class="row-list" id="badAfter" style="opacity:0;">
-              <div class="item-row"><span class="key-badge">key=0</span><span class="product-name">Mouse</span><span
-                  class="identity-arrow">✓ same</span></div>
-              <div class="item-row"><span class="key-badge">key=1</span><span class="product-name">Hub</span><span
-                  class="identity-arrow confused">⚠ was Keyboard!</span></div>
-              <div class="item-row"><span class="key-badge">key=2</span><span class="product-name">Stand</span><span
-                  class="identity-arrow confused">⚠ was Hub!</span></div>
-            </div>
-            <div class="mismatch-callout" id="badCallout"><strong>React is confused.</strong> key=1 used to be Keyboard,
-              now it's Hub. Same key, different data — unnecessary re-renders and state bugs.</div>
-          </div>
-        </div>
-      </div>
+        <!-- LEFT: key={index} -->
+        <div class="keys-half bad">
+          <div class="half-title">🔴 key={index}</div>
+          <div class="half-sub">Keys are positions: 0, 1, 2, 3</div>
 
-      <div class="vs-divider">VS</div>
-
-      <div class="keys-half good">
-        <h3>🟢 &nbsp;key = {product.id}</h3>
-        <p class="panel-sub">Unique IDs stay attached to their item forever</p>
-        <div class="keys-columns">
-          <div class="keys-col">
-            <div class="state-label visible">Before</div>
-            <div class="row-list" id="goodBefore">
-              <div class="item-row"><span class="key-badge">key=1</span><span class="product-name">Mouse</span></div>
-              <div class="item-row"><span class="key-badge">key=2</span><span
-                  class="product-name"><strong>Keyboard</strong></span></div>
-              <div class="item-row"><span class="key-badge">key=3</span><span class="product-name">Hub</span></div>
-              <div class="item-row"><span class="key-badge">key=4</span><span class="product-name">Stand</span></div>
-            </div>
+          <!-- BEFORE -->
+          <div class="card-list" id="bl-before">
+            <div class="cl-header">Before</div>
+            <div class="item-row" id="bl-b0"><span class="ir-key">key=0</span><span class="ir-emoji">🖱️</span><span
+                class="ir-name">Mouse</span></div>
+            <div class="item-row highlight-del" id="bl-b1"><span class="ir-key">key=1</span><span
+                class="ir-emoji">⌨️</span><span class="ir-name">Keyboard</span></div>
+            <div class="item-row" id="bl-b2"><span class="ir-key">key=2</span><span class="ir-emoji">🔌</span><span
+                class="ir-name">USB-C Hub</span></div>
+            <div class="item-row" id="bl-b3"><span class="ir-key">key=3</span><span class="ir-emoji">💻</span><span
+                class="ir-name">Laptop Stand</span></div>
           </div>
-          <div class="keys-col">
-            <div class="state-label" id="goodAfterLabel">After</div>
-            <div class="row-list" id="goodAfter" style="opacity:0;">
-              <div class="item-row"><span class="key-badge">key=1</span><span class="product-name">Mouse</span><span
-                  class="identity-arrow correct">✓ still Mouse</span></div>
-              <div class="item-row"><span class="key-badge">key=3</span><span class="product-name">Hub</span><span
-                  class="identity-arrow correct">✓ still Hub</span></div>
-              <div class="item-row"><span class="key-badge">key=4</span><span class="product-name">Stand</span><span
-                  class="identity-arrow correct">✓ still Stand</span></div>
-            </div>
-            <div class="mismatch-callout" id="goodCallout"><strong>React knows exactly what happened.</strong> key=2
-              disappeared — only Keyboard removed. Keys 1, 3, 4 untouched. Minimal work.</div>
+
+          <!-- AFTER -->
+          <div class="card-list" id="bl-after">
+            <div class="cl-header">After — Keyboard deleted</div>
+            <div class="item-row" id="bl-a0"><span class="ir-key">key=0</span><span class="ir-emoji">🖱️</span><span
+                class="ir-name">Mouse</span><span class="ir-tag ok" id="bt0">✓ same</span></div>
+            <div class="item-row" id="bl-a1"><span class="ir-key">key=1</span><span class="ir-emoji">🔌</span><span
+                class="ir-name">USB-C Hub</span><span class="ir-tag wrong" id="bt1">✗ was Keyboard!</span></div>
+            <div class="item-row" id="bl-a2"><span class="ir-key">key=2</span><span class="ir-emoji">💻</span><span
+                class="ir-name">Laptop Stand</span><span class="ir-tag wrong" id="bt2">✗ was Hub!</span></div>
+          </div>
+
+          <div class="result-label" id="bad-result">
+            React re-renders 2 items + destroys 1.<br><strong>3 DOM operations.</strong>
           </div>
         </div>
-      </div>
 
+        <div class="vs-badge">VS</div>
+
+        <!-- RIGHT: key={id} -->
+        <div class="keys-half good">
+          <div class="half-title">🟢 key={product.id}</div>
+          <div class="half-sub">Keys are stable IDs: 1, 2, 3, 4</div>
+
+          <!-- BEFORE -->
+          <div class="card-list" id="gr-before">
+            <div class="cl-header">Before</div>
+            <div class="item-row" id="gr-b0"><span class="ir-key">id=1</span><span class="ir-emoji">🖱️</span><span
+                class="ir-name">Mouse</span></div>
+            <div class="item-row highlight-del" id="gr-b1"><span class="ir-key">id=2</span><span
+                class="ir-emoji">⌨️</span><span class="ir-name">Keyboard</span></div>
+            <div class="item-row" id="gr-b2"><span class="ir-key">id=3</span><span class="ir-emoji">🔌</span><span
+                class="ir-name">USB-C Hub</span></div>
+            <div class="item-row" id="gr-b3"><span class="ir-key">id=4</span><span class="ir-emoji">💻</span><span
+                class="ir-name">Laptop Stand</span></div>
+          </div>
+
+          <!-- AFTER -->
+          <div class="card-list" id="gr-after">
+            <div class="cl-header">After — Keyboard deleted</div>
+            <div class="item-row" id="gr-a0"><span class="ir-key">id=1</span><span class="ir-emoji">🖱️</span><span
+                class="ir-name">Mouse</span><span class="ir-tag ok" id="gt0">✓ same</span></div>
+            <div class="item-row" id="gr-a1"><span class="ir-key">id=3</span><span class="ir-emoji">🔌</span><span
+                class="ir-name">USB-C Hub</span><span class="ir-tag ok" id="gt1">✓ same</span></div>
+            <div class="item-row" id="gr-a2"><span class="ir-key">id=4</span><span class="ir-emoji">💻</span><span
+                class="ir-name">Laptop Stand</span><span class="ir-tag ok" id="gt2">✓ same</span></div>
+          </div>
+
+          <div class="result-label" id="good-result">
+            React removes only Keyboard.<br><strong>1 DOM operation.</strong>
+          </div>
+        </div>
+
+        <!-- TAKEAWAY -->
+        <div class="keys-takeaway" id="keys-takeaway">
+          <div class="kt-box">
+            <strong>Keys = Identity</strong><br><br>
+            <span class="bad-code">key={index}</span> — positions shift when items change.<br>
+            React gets confused, re-renders the wrong things.<br><br>
+            <span class="code">key={product.id}</span> — stable, unique, never shifts.<br>
+            React knows exactly what changed.<br><br>
+            <strong>Always use a unique ID from your data.</strong>
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <div class="bottom-bar">
@@ -785,14 +861,13 @@
         <button class="p-btn" id="k-prev">⏮</button>
         <button class="p-btn play-pause" id="k-play">▶</button>
         <button class="p-btn" id="k-next">⏭</button>
-        <span class="step-indicator" id="k-indicator">Step 0 / 4</span>
+        <span class="step-indicator" id="k-indicator">Step 0 / 5</span>
       </div>
       <div class="narration" id="k-narration">Press <strong>▶</strong> or <strong>⏭</strong> to begin.</div>
     </div>
   </section>
 
   <script>
-    // ── TAB SWITCHING ──
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -802,171 +877,135 @@
       });
     });
 
-    // ── PLAYER ENGINE ──
     function createPlayer({ totalSteps, stepFn, resetFn, playBtn, prevBtn, nextBtn, indicator, narrationEl, narrations }) {
       let current = 0, interval = null, playing = false;
-
       function updateUI() {
         indicator.textContent = `Step ${current} / ${totalSteps}`;
         prevBtn.disabled = current === 0;
         nextBtn.disabled = current === totalSteps;
         narrationEl.innerHTML = narrations[current] || '';
       }
-
       function goTo(step) {
         if (step < 0 || step > totalSteps) return;
-        if (step < current) {
-          resetFn(); current = 0;
-          for (let i = 1; i <= step; i++) stepFn(i);
-          current = step;
-        } else {
-          while (current < step) { current++; stepFn(current); }
-        }
+        if (step < current) { resetFn(); current = 0; for (let i = 1; i <= step; i++) stepFn(i); current = step; }
+        else { while (current < step) { current++; stepFn(current); } }
         updateUI();
       }
-
       function next() { if (current >= totalSteps) { pause(); return; } goTo(current + 1); }
       function prev() { if (current <= 0) return; goTo(current - 1); }
-
       function play() {
         if (current >= totalSteps) { resetFn(); current = 0; updateUI(); }
         playing = true; playBtn.textContent = '⏸';
-        interval = setInterval(() => { if (current >= totalSteps) { pause(); return; } next(); }, 2200);
+        interval = setInterval(() => { if (current >= totalSteps) { pause(); return; } next(); }, 3000);
       }
-
       function pause() { playing = false; playBtn.textContent = '▶'; clearInterval(interval); }
-
       playBtn.addEventListener('click', () => playing ? pause() : play());
       nextBtn.addEventListener('click', () => { pause(); next(); });
       prevBtn.addEventListener('click', () => { pause(); prev(); });
       updateUI();
     }
 
-    // ═══════════════════════════════════════
-    // VISUAL 1: PICTURE FRAME
-    // ═══════════════════════════════════════
+    // ═══ TAB 1 ═══
     const codeLines = document.querySelectorAll('.code-line');
-    const vf1 = document.getElementById('vf1');
-    const vf2 = document.getElementById('vf2');
-    const vf3 = document.getElementById('vf3');
-    const mc1 = document.getElementById('mc1');
-    const mc2 = document.getElementById('mc2');
-    const mc3 = document.getElementById('mc3');
-    const aboutText = document.getElementById('aboutText');
-    const contactContent = document.getElementById('contactContent');
-    const takeawayOverlay = document.getElementById('takeawayOverlay');
-
-    function frameHighlight(step) {
+    function frameStep(step) {
       codeLines.forEach(line => {
         const s = parseInt(line.dataset.step);
-        if (s === step) { line.classList.add('active-glow'); line.classList.add('highlight'); }
+        if (s === step) { line.classList.add('active-glow', 'highlight'); }
         else if (s > 0 && s < step) { line.classList.remove('active-glow'); line.classList.add('highlight'); }
         else { line.classList.remove('active-glow', 'highlight'); }
       });
+      if (step === 2) { document.getElementById('vf1').classList.add('visible'); setTimeout(() => { document.getElementById('mc1').classList.add('visible'); setTimeout(() => document.getElementById('mc2').classList.add('visible'), 120); setTimeout(() => document.getElementById('mc3').classList.add('visible'), 240); }, 200); }
+      if (step === 3) { document.getElementById('vf2').classList.add('visible'); setTimeout(() => document.getElementById('aboutText').classList.add('visible'), 250); }
+      if (step === 4) { document.getElementById('vf3').classList.add('visible'); setTimeout(() => document.getElementById('contactContent').classList.add('visible'), 250); }
+      if (step === 5) { document.getElementById('takeawayOverlay').classList.add('visible'); }
     }
-
-    function frameStep(step) {
-      frameHighlight(step);
-      if (step === 2) {
-        vf1.classList.add('visible');
-        setTimeout(() => { mc1.classList.add('visible'); setTimeout(() => mc2.classList.add('visible'), 120); setTimeout(() => mc3.classList.add('visible'), 240); }, 200);
-      }
-      if (step === 3) { vf2.classList.add('visible'); setTimeout(() => aboutText.classList.add('visible'), 250); }
-      if (step === 4) { vf3.classList.add('visible'); setTimeout(() => contactContent.classList.add('visible'), 250); }
-      if (step === 5) { takeawayOverlay.classList.add('visible'); }
-    }
-
     function frameReset() {
       codeLines.forEach(l => l.classList.remove('highlight', 'active-glow'));
-      [vf1, vf2, vf3].forEach(f => f.classList.remove('visible'));
-      [mc1, mc2, mc3].forEach(c => c.classList.remove('visible'));
-      aboutText.classList.remove('visible');
-      contactContent.classList.remove('visible');
-      takeawayOverlay.classList.remove('visible');
+      ['vf1', 'vf2', 'vf3'].forEach(id => document.getElementById(id).classList.remove('visible'));
+      ['mc1', 'mc2', 'mc3'].forEach(id => document.getElementById(id).classList.remove('visible'));
+      document.getElementById('aboutText').classList.remove('visible');
+      document.getElementById('contactContent').classList.remove('visible');
+      document.getElementById('takeawayOverlay').classList.remove('visible');
     }
-
     createPlayer({
-      totalSteps: 5,
-      stepFn: frameStep,
-      resetFn: frameReset,
-      playBtn: document.getElementById('f-play'),
-      prevBtn: document.getElementById('f-prev'),
-      nextBtn: document.getElementById('f-next'),
-      indicator: document.getElementById('f-indicator'),
+      totalSteps: 5, stepFn: frameStep, resetFn: frameReset,
+      playBtn: document.getElementById('f-play'), prevBtn: document.getElementById('f-prev'),
+      nextBtn: document.getElementById('f-next'), indicator: document.getElementById('f-indicator'),
       narrationEl: document.getElementById('f-narration'),
       narrations: {
         0: 'Press <strong>▶</strong> or <strong>⏭</strong> to begin.',
-        1: 'We define <span class="code">&lt;Section&gt;</span> — a reusable wrapper. It takes <strong>title</strong> for the header and <strong>children</strong> for whatever goes inside. The frame itself never changes.',
-        2: 'First use — <span class="code">title="Featured Items"</span>. The <strong>children</strong> here is a <span class="code">&lt;ProductList /&gt;</span> with three product cards.',
-        3: 'Second use — <span class="code">title="About Us"</span>. Same frame, but <strong>children</strong> is just a <span class="code">&lt;p&gt;</span> tag. Completely different content, identical wrapper.',
-        4: 'Third use — <span class="code">title="Contact"</span>. <strong>children</strong> is a <span class="code">&lt;ContactForm /&gt;</span>. The frame doesn\'t know or care what\'s inside.',
-        5: 'The <span class="code">&lt;Section&gt;</span> component was written <strong>once</strong>. The <span class="code">children</span> prop made it work with any content. That\'s composition.'
+        1: 'We define <span class="code">&lt;Section&gt;</span> — a reusable wrapper. It takes <strong>title</strong> and <strong>children</strong>.',
+        2: 'First use — <span class="code">title="Featured Items"</span>. <strong>children</strong> = product cards.',
+        3: 'Second use — <span class="code">title="About Us"</span>. Same frame, <strong>children</strong> = a paragraph.',
+        4: 'Third use — <span class="code">title="Contact"</span>. <strong>children</strong> = a contact form.',
+        5: 'One component. Three uses. <span class="code">children</span> made it work with any content. <strong>That\'s composition.</strong>'
       }
     });
 
-    // ═══════════════════════════════════════
-    // VISUAL 2: KEYS
-    // ═══════════════════════════════════════
-    const badBefore = document.getElementById('badBefore');
-    const badAfter = document.getElementById('badAfter');
-    const badAfterLabel = document.getElementById('badAfterLabel');
-    const badCallout = document.getElementById('badCallout');
-    const goodBefore = document.getElementById('goodBefore');
-    const goodAfter = document.getElementById('goodAfter');
-    const goodAfterLabel = document.getElementById('goodAfterLabel');
-    const goodCallout = document.getElementById('goodCallout');
+    // ═══ TAB 2: KEYS ═══
+    const $ = id => document.getElementById(id);
 
     function keyStep(step) {
+      // 1: Show BEFORE lists
       if (step === 1) {
-        badBefore.children[1].classList.add('highlight-row');
-        goodBefore.children[1].classList.add('highlight-row');
+        $('bl-before').classList.add('visible');
+        $('gr-before').classList.add('visible');
       }
+      // 2: Keyboard fades out in both
       if (step === 2) {
-        badBefore.children[1].classList.add('removing');
-        goodBefore.children[1].classList.add('removing');
+        $('bl-b1').classList.add('row-faded');
+        $('gr-b1').classList.add('row-faded');
       }
+      // 3: Show AFTER lists
       if (step === 3) {
-        badAfterLabel.classList.add('visible');
-        badAfter.style.opacity = '1';
-        goodAfterLabel.classList.add('visible');
-        goodAfter.style.opacity = '1';
-        badAfter.querySelectorAll('.identity-arrow').forEach((a, i) => setTimeout(() => a.classList.add('show'), i * 180));
-        goodAfter.querySelectorAll('.identity-arrow').forEach((a, i) => setTimeout(() => a.classList.add('show'), i * 180));
+        $('bl-after').classList.add('visible');
+        $('gr-after').classList.add('visible');
       }
+      // 4: Show tags + results
       if (step === 4) {
-        badCallout.classList.add('visible');
-        goodCallout.classList.add('visible');
+        ['bt0', 'bt1', 'bt2'].forEach((id, i) => setTimeout(() => $(id).classList.add('visible'), i * 250));
+        ['gt0', 'gt1', 'gt2'].forEach((id, i) => setTimeout(() => $(id).classList.add('visible'), i * 250));
+        setTimeout(() => {
+          $('bl-a1').classList.add('row-wrong');
+          $('bl-a2').classList.add('row-wrong');
+          $('gr-a0').classList.add('row-ok');
+          $('gr-a1').classList.add('row-ok');
+          $('gr-a2').classList.add('row-ok');
+        }, 400);
+        setTimeout(() => {
+          $('bad-result').classList.add('visible');
+          $('good-result').classList.add('visible');
+        }, 800);
+      }
+      // 5: Takeaway
+      if (step === 5) {
+        $('keys-takeaway').classList.add('visible');
       }
     }
 
     function keyReset() {
-      badBefore.children[1].classList.remove('highlight-row', 'removing');
-      goodBefore.children[1].classList.remove('highlight-row', 'removing');
-      badAfterLabel.classList.remove('visible');
-      badAfter.style.opacity = '0';
-      goodAfterLabel.classList.remove('visible');
-      goodAfter.style.opacity = '0';
-      badAfter.querySelectorAll('.identity-arrow').forEach(a => a.classList.remove('show'));
-      goodAfter.querySelectorAll('.identity-arrow').forEach(a => a.classList.remove('show'));
-      badCallout.classList.remove('visible');
-      goodCallout.classList.remove('visible');
+      ['bl-before', 'bl-after', 'gr-before', 'gr-after'].forEach(id => $(id).classList.remove('visible'));
+      ['bl-b1', 'gr-b1'].forEach(id => $(id).classList.remove('row-faded'));
+      ['bt0', 'bt1', 'bt2', 'gt0', 'gt1', 'gt2'].forEach(id => $(id).classList.remove('visible'));
+      ['bl-a1', 'bl-a2'].forEach(id => $(id).classList.remove('row-wrong'));
+      ['gr-a0', 'gr-a1', 'gr-a2'].forEach(id => $(id).classList.remove('row-ok'));
+      $('bad-result').classList.remove('visible');
+      $('good-result').classList.remove('visible');
+      $('keys-takeaway').classList.remove('visible');
     }
 
     createPlayer({
-      totalSteps: 4,
-      stepFn: keyStep,
-      resetFn: keyReset,
-      playBtn: document.getElementById('k-play'),
-      prevBtn: document.getElementById('k-prev'),
-      nextBtn: document.getElementById('k-next'),
-      indicator: document.getElementById('k-indicator'),
-      narrationEl: document.getElementById('k-narration'),
+      totalSteps: 5, stepFn: keyStep, resetFn: keyReset,
+      playBtn: $('k-play'), prevBtn: $('k-prev'),
+      nextBtn: $('k-next'), indicator: $('k-indicator'),
+      narrationEl: $('k-narration'),
       narrations: {
         0: 'Press <strong>▶</strong> or <strong>⏭</strong> to begin.',
-        1: 'Four products in both lists. Left uses <span class="code">key={index}</span>, right uses <span class="code">key={product.id}</span>. <strong>Keyboard</strong> is highlighted — we\'re about to delete it.',
-        2: '<strong>Keyboard removed</strong> from both arrays. Watch what happens to the keys…',
-        3: '<strong>Left:</strong> Indices shifted. key=1 was Keyboard, now it\'s Hub. Same key, different item. <strong>Right:</strong> key=2 simply disappeared. Keys 1, 3, 4 still point to the same items.',
-        4: '<strong>Left:</strong> React thinks key=1 changed content — re-renders everything. Can break inputs, animations, focus. <strong>Right:</strong> React removes one DOM node. Everything else untouched.'
+        1: 'Four products rendered with <span class="code">.map()</span>. Left uses <span class="bad-hl">key={index}</span>, right uses <span class="code">key={product.id}</span>. The highlighted row (Keyboard) is about to be deleted.',
+        2: '<strong>Keyboard is removed from the array.</strong> Everyone below shifts up one position.',
+        3: 'React re-runs <span class="code">.map()</span> and builds new elements. <strong>Left:</strong> Hub now gets key=1 (Keyboard\'s old key). <strong>Right:</strong> Hub keeps id=3 (its own ID).',
+        4: '<strong>Left:</strong> React matches key=1 old→new and sees different content — re-renders it. Same for key=2. Then destroys key=3. <strong>3 operations.</strong><br><strong>Right:</strong> id=2 gone → remove it. Everything else matches perfectly. <strong>1 operation.</strong>',
+        5: '<strong>Keys = Identity.</strong> Always use <span class="code">key={product.id}</span> — a stable unique value from your data.'
       }
     });
   </script>
