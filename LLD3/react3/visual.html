@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>React 3 — Visual Explainers</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── NAV TABS ── */
+    .tab-nav {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1rem;
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+      flex-shrink: 0;
+    }
+
+    .tab-btn {
+      padding: 0.5rem 2rem;
+      border: 1px solid #30363d;
+      background: transparent;
+      color: #8b949e;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      background: #21262d;
+      color: #c9d1d9;
+    }
+
+    .tab-btn.active {
+      background: #21262d;
+      color: #f0f6fc;
+      border-color: #58a6ff;
+    }
+
+    /* ── TAB CONTENT ── */
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow: hidden;
+      flex-direction: column;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .main-area {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── BOTTOM BAR ── */
+    .bottom-bar {
+      flex-shrink: 0;
+      background: #161b22;
+      border-top: 1px solid #21262d;
+      display: flex;
+      align-items: center;
+      padding: 0.55rem 1.5rem;
+      gap: 1rem;
+    }
+
+    .player-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .p-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #30363d;
+      background: #161b22;
+      color: #8b949e;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .p-btn:hover:not(:disabled) {
+      background: #21262d;
+      color: #f0f6fc;
+    }
+
+    .p-btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    .p-btn.play-pause {
+      width: 46px;
+      height: 46px;
+      font-size: 1.15rem;
+      border-color: #58a6ff;
+      color: #58a6ff;
+    }
+
+    .p-btn.play-pause:hover:not(:disabled) {
+      background: #58a6ff22;
+    }
+
+    .step-indicator {
+      font-size: 0.85rem;
+      color: #484f58;
+      min-width: 80px;
+      text-align: center;
+      font-family: 'Courier New', monospace;
+    }
+
+    .narration {
+      flex: 1;
+      padding: 0.6rem 1.2rem;
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      color: #c9d1d9;
+      line-height: 1.55;
+      display: flex;
+      align-items: center;
+    }
+
+    .narration strong {
+      color: #f0f6fc;
+    }
+
+    .narration .code {
+      color: #58a6ff;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ═══════════════════════════════════════
+     VISUAL 1: PICTURE FRAME
+     ═══════════════════════════════════════ */
+
+    .left-pane {
+      width: 40%;
+      padding: 1.2rem 1rem 1.2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow: hidden;
+      border-right: 1px solid #21262d;
+    }
+
+    .pane-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #484f58;
+      margin-bottom: 0.6rem;
+    }
+
+    .code-panel {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.92rem;
+      line-height: 1.85;
+      border: 1px solid #21262d;
+      overflow-y: auto;
+    }
+
+    .code-line {
+      opacity: 0.18;
+      transition: opacity 0.5s ease;
+      padding: 0.05rem 0.4rem;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .code-line.highlight {
+      opacity: 0.55;
+    }
+
+    .code-line.active-glow {
+      opacity: 1;
+      background: #58a6ff0a;
+    }
+
+    .ck {
+      color: #ff7b72;
+    }
+
+    .cn {
+      color: #d2a8ff;
+    }
+
+    .cp {
+      color: #79c0ff;
+    }
+
+    .cs {
+      color: #a5d6ff;
+    }
+
+    .cb {
+      color: #484f58;
+    }
+
+    .ct {
+      color: #7ee787;
+    }
+
+    .cw {
+      color: #c9d1d9;
+    }
+
+    .cy {
+      color: #58a6ff;
+      font-weight: 700;
+    }
+
+    /* Right pane */
+    .right-pane {
+      flex: 1;
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      overflow: hidden;
+    }
+
+    .visual-frame {
+      width: 240px;
+      border-radius: 10px;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: all 0.5s ease;
+      flex-shrink: 0;
+      border: 1px solid #21262d;
+    }
+
+    .visual-frame.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .frame-header {
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-align: center;
+      background: #161b22;
+      color: #f0f6fc;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .frame-body {
+      padding: 0.9rem;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      position: relative;
+      background: #0d1117;
+    }
+
+    .frame-body .children-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #30363d;
+      position: absolute;
+      top: 5px;
+      right: 10px;
+    }
+
+    .mini-card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+      padding: 0.45rem 0.7rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: all 0.4s ease;
+    }
+
+    .mini-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .mini-card .mc-icon {
+      font-size: 1.1rem;
+    }
+
+    .mini-card .mc-text {
+      flex: 1;
+      color: #c9d1d9;
+    }
+
+    .mini-card .mc-price {
+      color: #8b949e;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+
+    .about-text {
+      font-size: 0.9rem;
+      color: #8b949e;
+      text-align: center;
+      line-height: 1.6;
+      padding: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .about-text.visible {
+      opacity: 1;
+    }
+
+    .contact-content {
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .contact-content.visible {
+      opacity: 1;
+    }
+
+    .contact-content .contact-icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .contact-content .contact-line {
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin: 0.2rem 0;
+    }
+
+    /* Takeaway overlay */
+    .takeaway-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #0d1117e8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 10;
+    }
+
+    .takeaway-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .takeaway-box {
+      padding: 2rem 2.5rem;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 1.15rem;
+      line-height: 2;
+      color: #c9d1d9;
+      max-width: 620px;
+    }
+
+    .takeaway-box strong {
+      color: #f0f6fc;
+    }
+
+    .takeaway-box .code {
+      color: #58a6ff;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ═══════════════════════════════════════
+     VISUAL 2: KEYS
+     ═══════════════════════════════════════ */
+
+    .keys-main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .keys-half {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1.2rem 1.5rem;
+      overflow: hidden;
+    }
+
+    .keys-half.bad {
+      border-right: 1px solid #21262d;
+    }
+
+    .keys-half h3 {
+      font-size: 1.15rem;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #f0f6fc;
+    }
+
+    .keys-half .panel-sub {
+      font-size: 0.82rem;
+      color: #484f58;
+      margin-bottom: 0.8rem;
+    }
+
+    .keys-columns {
+      flex: 1;
+      display: flex;
+      gap: 1.2rem;
+      overflow: hidden;
+    }
+
+    .keys-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .state-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #484f58;
+      margin-bottom: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .state-label.visible {
+      opacity: 1;
+    }
+
+    .row-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .item-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 6px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      transition: all 0.5s ease;
+      overflow: hidden;
+    }
+
+    .item-row.highlight-row {
+      border-color: #30363d;
+      background: #1c2128;
+    }
+
+    .item-row.removing {
+      opacity: 0;
+      transform: translateX(20px);
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-bottom: -0.4rem;
+      border-width: 0;
+    }
+
+    .item-row .key-badge {
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      min-width: 58px;
+      text-align: center;
+      font-weight: 700;
+      background: #21262d;
+      color: #8b949e;
+      border: 1px solid #30363d;
+    }
+
+    .item-row .product-name {
+      font-size: 0.95rem;
+      flex: 1;
+      color: #c9d1d9;
+    }
+
+    .item-row .identity-arrow {
+      font-size: 0.78rem;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      white-space: nowrap;
+    }
+
+    .item-row .identity-arrow.show {
+      opacity: 1;
+    }
+
+    .item-row .identity-arrow.confused {
+      color: #f85149;
+    }
+
+    .item-row .identity-arrow.correct {
+      color: #58a6ff;
+    }
+
+    .mismatch-callout {
+      margin-top: 0.7rem;
+      padding: 0.65rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: all 0.4s ease;
+    }
+
+    .mismatch-callout.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .bad .mismatch-callout {
+      background: #f8514912;
+      border: 1px solid #f8514933;
+      color: #f85149;
+    }
+
+    .good .mismatch-callout {
+      background: #58a6ff12;
+      border: 1px solid #58a6ff33;
+      color: #58a6ff;
+    }
+
+    .vs-divider {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #484f58;
+      z-index: 5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ── TAB NAVIGATION ── -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="frame">1 · Picture Frame (children)</button>
+    <button class="tab-btn" data-tab="keys">2 · Index vs ID Keys</button>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════
+     TAB 1: PICTURE FRAME
+     ═══════════════════════════════════════════ -->
+  <section class="tab-content active" id="tab-frame">
+    <div class="main-area">
+
+      <div class="left-pane">
+        <div class="pane-title">App.jsx</div>
+        <div class="code-panel" id="codePanel">
+          <div class="code-line" data-step="1"><span class="ck">function</span> <span class="cn">Section</span><span
+              class="cb">({ </span><span class="cp">title</span>, <span class="cp">children</span><span class="cb"> })
+              {</span></div>
+          <div class="code-line" data-step="1">&nbsp;&nbsp;<span class="ck">return</span> <span class="cb">(</span>
+          </div>
+          <div class="code-line" data-step="1">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">&lt;div</span> <span
+              class="cp">className</span>=<span class="cs">"section"</span><span class="ct">&gt;</span></div>
+          <div class="code-line" data-step="1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span
+              class="ct">&lt;h2&gt;</span><span class="cb">{</span><span class="cp">title</span><span
+              class="cb">}</span><span class="ct">&lt;/h2&gt;</span></div>
+          <div class="code-line" data-step="1">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cy">{children}</span>
+          </div>
+          <div class="code-line" data-step="1">&nbsp;&nbsp;&nbsp;&nbsp;<span class="ct">&lt;/div&gt;</span></div>
+          <div class="code-line" data-step="1">&nbsp;&nbsp;<span class="cb">)</span></div>
+          <div class="code-line" data-step="1"><span class="cb">}</span></div>
+          <div class="code-line" data-step="0">&nbsp;</div>
+          <div class="code-line" data-step="2"><span class="ct">&lt;Section</span> <span class="cp">title</span>=<span
+              class="cs">"Featured Items"</span><span class="ct">&gt;</span></div>
+          <div class="code-line" data-step="2">&nbsp;&nbsp;<span class="ct">&lt;ProductList /&gt;</span></div>
+          <div class="code-line" data-step="2"><span class="ct">&lt;/Section&gt;</span></div>
+          <div class="code-line" data-step="0">&nbsp;</div>
+          <div class="code-line" data-step="3"><span class="ct">&lt;Section</span> <span class="cp">title</span>=<span
+              class="cs">"About Us"</span><span class="ct">&gt;</span></div>
+          <div class="code-line" data-step="3">&nbsp;&nbsp;<span class="ct">&lt;p&gt;</span><span class="cw">We sell the
+              best tech gear.</span><span class="ct">&lt;/p&gt;</span></div>
+          <div class="code-line" data-step="3"><span class="ct">&lt;/Section&gt;</span></div>
+          <div class="code-line" data-step="0">&nbsp;</div>
+          <div class="code-line" data-step="4"><span class="ct">&lt;Section</span> <span class="cp">title</span>=<span
+              class="cs">"Contact"</span><span class="ct">&gt;</span></div>
+          <div class="code-line" data-step="4">&nbsp;&nbsp;<span class="ct">&lt;ContactForm /&gt;</span></div>
+          <div class="code-line" data-step="4"><span class="ct">&lt;/Section&gt;</span></div>
+        </div>
+      </div>
+
+      <div class="right-pane">
+        <div class="visual-frame frame-1" id="vf1">
+          <div class="frame-header">Featured Items</div>
+          <div class="frame-body">
+            <span class="children-label">children</span>
+            <div class="mini-card" id="mc1"><span class="mc-icon">🖱️</span><span class="mc-text">Wireless
+                Mouse</span><span class="mc-price">₹599</span></div>
+            <div class="mini-card" id="mc2"><span class="mc-icon">⌨️</span><span class="mc-text">Mechanical
+                Keyboard</span><span class="mc-price">₹899</span></div>
+            <div class="mini-card" id="mc3"><span class="mc-icon">🔌</span><span class="mc-text">USB-C Hub</span><span
+                class="mc-price">₹349</span></div>
+          </div>
+        </div>
+
+        <div class="visual-frame frame-2" id="vf2">
+          <div class="frame-header">About Us</div>
+          <div class="frame-body">
+            <span class="children-label">children</span>
+            <p class="about-text" id="aboutText">We sell the best tech gear at unbeatable prices. Quality guaranteed
+              since 2020.</p>
+          </div>
+        </div>
+
+        <div class="visual-frame frame-3" id="vf3">
+          <div class="frame-header">Contact</div>
+          <div class="frame-body">
+            <span class="children-label">children</span>
+            <div class="contact-content" id="contactContent">
+              <div class="contact-icon">✉️</div>
+              <div class="contact-line">hello@techshop.com</div>
+              <div class="contact-line">+91 98765 43210</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="takeaway-overlay" id="takeawayOverlay">
+        <div class="takeaway-box">
+          <strong>The frame never changes.</strong><br />
+          <span class="code">&lt;Section&gt;</span> provides the title and wrapper every time.<br />
+          <span class="code">children</span> is different each time.<br /><br />
+          One component. Three uses. <strong>That's composition.</strong>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-bar">
+      <div class="player-controls">
+        <button class="p-btn" id="f-prev">⏮</button>
+        <button class="p-btn play-pause" id="f-play">▶</button>
+        <button class="p-btn" id="f-next">⏭</button>
+        <span class="step-indicator" id="f-indicator">Step 0 / 5</span>
+      </div>
+      <div class="narration" id="f-narration">Press <strong>▶</strong> or <strong>⏭</strong> to begin.</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+     TAB 2: KEYS
+     ═══════════════════════════════════════════ -->
+  <section class="tab-content" id="tab-keys">
+    <div class="keys-main">
+
+      <div class="keys-half bad">
+        <h3>🔴 &nbsp;key = {index}</h3>
+        <p class="panel-sub">Array index shifts when items are removed</p>
+        <div class="keys-columns">
+          <div class="keys-col">
+            <div class="state-label visible">Before</div>
+            <div class="row-list" id="badBefore">
+              <div class="item-row"><span class="key-badge">key=0</span><span class="product-name">Mouse</span></div>
+              <div class="item-row"><span class="key-badge">key=1</span><span
+                  class="product-name"><strong>Keyboard</strong></span></div>
+              <div class="item-row"><span class="key-badge">key=2</span><span class="product-name">Hub</span></div>
+              <div class="item-row"><span class="key-badge">key=3</span><span class="product-name">Stand</span></div>
+            </div>
+          </div>
+          <div class="keys-col">
+            <div class="state-label" id="badAfterLabel">After</div>
+            <div class="row-list" id="badAfter" style="opacity:0;">
+              <div class="item-row"><span class="key-badge">key=0</span><span class="product-name">Mouse</span><span
+                  class="identity-arrow">✓ same</span></div>
+              <div class="item-row"><span class="key-badge">key=1</span><span class="product-name">Hub</span><span
+                  class="identity-arrow confused">⚠ was Keyboard!</span></div>
+              <div class="item-row"><span class="key-badge">key=2</span><span class="product-name">Stand</span><span
+                  class="identity-arrow confused">⚠ was Hub!</span></div>
+            </div>
+            <div class="mismatch-callout" id="badCallout"><strong>React is confused.</strong> key=1 used to be Keyboard,
+              now it's Hub. Same key, different data — unnecessary re-renders and state bugs.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="vs-divider">VS</div>
+
+      <div class="keys-half good">
+        <h3>🟢 &nbsp;key = {product.id}</h3>
+        <p class="panel-sub">Unique IDs stay attached to their item forever</p>
+        <div class="keys-columns">
+          <div class="keys-col">
+            <div class="state-label visible">Before</div>
+            <div class="row-list" id="goodBefore">
+              <div class="item-row"><span class="key-badge">key=1</span><span class="product-name">Mouse</span></div>
+              <div class="item-row"><span class="key-badge">key=2</span><span
+                  class="product-name"><strong>Keyboard</strong></span></div>
+              <div class="item-row"><span class="key-badge">key=3</span><span class="product-name">Hub</span></div>
+              <div class="item-row"><span class="key-badge">key=4</span><span class="product-name">Stand</span></div>
+            </div>
+          </div>
+          <div class="keys-col">
+            <div class="state-label" id="goodAfterLabel">After</div>
+            <div class="row-list" id="goodAfter" style="opacity:0;">
+              <div class="item-row"><span class="key-badge">key=1</span><span class="product-name">Mouse</span><span
+                  class="identity-arrow correct">✓ still Mouse</span></div>
+              <div class="item-row"><span class="key-badge">key=3</span><span class="product-name">Hub</span><span
+                  class="identity-arrow correct">✓ still Hub</span></div>
+              <div class="item-row"><span class="key-badge">key=4</span><span class="product-name">Stand</span><span
+                  class="identity-arrow correct">✓ still Stand</span></div>
+            </div>
+            <div class="mismatch-callout" id="goodCallout"><strong>React knows exactly what happened.</strong> key=2
+              disappeared — only Keyboard removed. Keys 1, 3, 4 untouched. Minimal work.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-bar">
+      <div class="player-controls">
+        <button class="p-btn" id="k-prev">⏮</button>
+        <button class="p-btn play-pause" id="k-play">▶</button>
+        <button class="p-btn" id="k-next">⏭</button>
+        <span class="step-indicator" id="k-indicator">Step 0 / 4</span>
+      </div>
+      <div class="narration" id="k-narration">Press <strong>▶</strong> or <strong>⏭</strong> to begin.</div>
+    </div>
+  </section>
+
+  <script>
+    // ── TAB SWITCHING ──
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    // ── PLAYER ENGINE ──
+    function createPlayer({ totalSteps, stepFn, resetFn, playBtn, prevBtn, nextBtn, indicator, narrationEl, narrations }) {
+      let current = 0, interval = null, playing = false;
+
+      function updateUI() {
+        indicator.textContent = `Step ${current} / ${totalSteps}`;
+        prevBtn.disabled = current === 0;
+        nextBtn.disabled = current === totalSteps;
+        narrationEl.innerHTML = narrations[current] || '';
+      }
+
+      function goTo(step) {
+        if (step < 0 || step > totalSteps) return;
+        if (step < current) {
+          resetFn(); current = 0;
+          for (let i = 1; i <= step; i++) stepFn(i);
+          current = step;
+        } else {
+          while (current < step) { current++; stepFn(current); }
+        }
+        updateUI();
+      }
+
+      function next() { if (current >= totalSteps) { pause(); return; } goTo(current + 1); }
+      function prev() { if (current <= 0) return; goTo(current - 1); }
+
+      function play() {
+        if (current >= totalSteps) { resetFn(); current = 0; updateUI(); }
+        playing = true; playBtn.textContent = '⏸';
+        interval = setInterval(() => { if (current >= totalSteps) { pause(); return; } next(); }, 2200);
+      }
+
+      function pause() { playing = false; playBtn.textContent = '▶'; clearInterval(interval); }
+
+      playBtn.addEventListener('click', () => playing ? pause() : play());
+      nextBtn.addEventListener('click', () => { pause(); next(); });
+      prevBtn.addEventListener('click', () => { pause(); prev(); });
+      updateUI();
+    }
+
+    // ═══════════════════════════════════════
+    // VISUAL 1: PICTURE FRAME
+    // ═══════════════════════════════════════
+    const codeLines = document.querySelectorAll('.code-line');
+    const vf1 = document.getElementById('vf1');
+    const vf2 = document.getElementById('vf2');
+    const vf3 = document.getElementById('vf3');
+    const mc1 = document.getElementById('mc1');
+    const mc2 = document.getElementById('mc2');
+    const mc3 = document.getElementById('mc3');
+    const aboutText = document.getElementById('aboutText');
+    const contactContent = document.getElementById('contactContent');
+    const takeawayOverlay = document.getElementById('takeawayOverlay');
+
+    function frameHighlight(step) {
+      codeLines.forEach(line => {
+        const s = parseInt(line.dataset.step);
+        if (s === step) { line.classList.add('active-glow'); line.classList.add('highlight'); }
+        else if (s > 0 && s < step) { line.classList.remove('active-glow'); line.classList.add('highlight'); }
+        else { line.classList.remove('active-glow', 'highlight'); }
+      });
+    }
+
+    function frameStep(step) {
+      frameHighlight(step);
+      if (step === 2) {
+        vf1.classList.add('visible');
+        setTimeout(() => { mc1.classList.add('visible'); setTimeout(() => mc2.classList.add('visible'), 120); setTimeout(() => mc3.classList.add('visible'), 240); }, 200);
+      }
+      if (step === 3) { vf2.classList.add('visible'); setTimeout(() => aboutText.classList.add('visible'), 250); }
+      if (step === 4) { vf3.classList.add('visible'); setTimeout(() => contactContent.classList.add('visible'), 250); }
+      if (step === 5) { takeawayOverlay.classList.add('visible'); }
+    }
+
+    function frameReset() {
+      codeLines.forEach(l => l.classList.remove('highlight', 'active-glow'));
+      [vf1, vf2, vf3].forEach(f => f.classList.remove('visible'));
+      [mc1, mc2, mc3].forEach(c => c.classList.remove('visible'));
+      aboutText.classList.remove('visible');
+      contactContent.classList.remove('visible');
+      takeawayOverlay.classList.remove('visible');
+    }
+
+    createPlayer({
+      totalSteps: 5,
+      stepFn: frameStep,
+      resetFn: frameReset,
+      playBtn: document.getElementById('f-play'),
+      prevBtn: document.getElementById('f-prev'),
+      nextBtn: document.getElementById('f-next'),
+      indicator: document.getElementById('f-indicator'),
+      narrationEl: document.getElementById('f-narration'),
+      narrations: {
+        0: 'Press <strong>▶</strong> or <strong>⏭</strong> to begin.',
+        1: 'We define <span class="code">&lt;Section&gt;</span> — a reusable wrapper. It takes <strong>title</strong> for the header and <strong>children</strong> for whatever goes inside. The frame itself never changes.',
+        2: 'First use — <span class="code">title="Featured Items"</span>. The <strong>children</strong> here is a <span class="code">&lt;ProductList /&gt;</span> with three product cards.',
+        3: 'Second use — <span class="code">title="About Us"</span>. Same frame, but <strong>children</strong> is just a <span class="code">&lt;p&gt;</span> tag. Completely different content, identical wrapper.',
+        4: 'Third use — <span class="code">title="Contact"</span>. <strong>children</strong> is a <span class="code">&lt;ContactForm /&gt;</span>. The frame doesn\'t know or care what\'s inside.',
+        5: 'The <span class="code">&lt;Section&gt;</span> component was written <strong>once</strong>. The <span class="code">children</span> prop made it work with any content. That\'s composition.'
+      }
+    });
+
+    // ═══════════════════════════════════════
+    // VISUAL 2: KEYS
+    // ═══════════════════════════════════════
+    const badBefore = document.getElementById('badBefore');
+    const badAfter = document.getElementById('badAfter');
+    const badAfterLabel = document.getElementById('badAfterLabel');
+    const badCallout = document.getElementById('badCallout');
+    const goodBefore = document.getElementById('goodBefore');
+    const goodAfter = document.getElementById('goodAfter');
+    const goodAfterLabel = document.getElementById('goodAfterLabel');
+    const goodCallout = document.getElementById('goodCallout');
+
+    function keyStep(step) {
+      if (step === 1) {
+        badBefore.children[1].classList.add('highlight-row');
+        goodBefore.children[1].classList.add('highlight-row');
+      }
+      if (step === 2) {
+        badBefore.children[1].classList.add('removing');
+        goodBefore.children[1].classList.add('removing');
+      }
+      if (step === 3) {
+        badAfterLabel.classList.add('visible');
+        badAfter.style.opacity = '1';
+        goodAfterLabel.classList.add('visible');
+        goodAfter.style.opacity = '1';
+        badAfter.querySelectorAll('.identity-arrow').forEach((a, i) => setTimeout(() => a.classList.add('show'), i * 180));
+        goodAfter.querySelectorAll('.identity-arrow').forEach((a, i) => setTimeout(() => a.classList.add('show'), i * 180));
+      }
+      if (step === 4) {
+        badCallout.classList.add('visible');
+        goodCallout.classList.add('visible');
+      }
+    }
+
+    function keyReset() {
+      badBefore.children[1].classList.remove('highlight-row', 'removing');
+      goodBefore.children[1].classList.remove('highlight-row', 'removing');
+      badAfterLabel.classList.remove('visible');
+      badAfter.style.opacity = '0';
+      goodAfterLabel.classList.remove('visible');
+      goodAfter.style.opacity = '0';
+      badAfter.querySelectorAll('.identity-arrow').forEach(a => a.classList.remove('show'));
+      goodAfter.querySelectorAll('.identity-arrow').forEach(a => a.classList.remove('show'));
+      badCallout.classList.remove('visible');
+      goodCallout.classList.remove('visible');
+    }
+
+    createPlayer({
+      totalSteps: 4,
+      stepFn: keyStep,
+      resetFn: keyReset,
+      playBtn: document.getElementById('k-play'),
+      prevBtn: document.getElementById('k-prev'),
+      nextBtn: document.getElementById('k-next'),
+      indicator: document.getElementById('k-indicator'),
+      narrationEl: document.getElementById('k-narration'),
+      narrations: {
+        0: 'Press <strong>▶</strong> or <strong>⏭</strong> to begin.',
+        1: 'Four products in both lists. Left uses <span class="code">key={index}</span>, right uses <span class="code">key={product.id}</span>. <strong>Keyboard</strong> is highlighted — we\'re about to delete it.',
+        2: '<strong>Keyboard removed</strong> from both arrays. Watch what happens to the keys…',
+        3: '<strong>Left:</strong> Indices shifted. key=1 was Keyboard, now it\'s Hub. Same key, different item. <strong>Right:</strong> key=2 simply disappeared. Keys 1, 3, 4 still point to the same items.',
+        4: '<strong>Left:</strong> React thinks key=1 changed content — re-renders everything. Can break inputs, animations, focus. <strong>Right:</strong> React removes one DOM node. Everything else untouched.'
+      }
+    });
+  </script>
+
+</body>
+
+</html>
