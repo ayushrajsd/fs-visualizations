@@ -1,0 +1,2281 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VYBE Lab 5 · Safety: Workflow Integrity</title>
+    <style>
+        :root {
+            --bg: #f6f3ec;
+            --paper: #fff;
+            --ink: #1b2133;
+            --ink2: #3a4257;
+            --muted: #6b7385;
+            --line: #e2dccd;
+            --soft: #efeae0;
+            --partner: #2f6bff;
+            --partner-soft: #e4edff;
+            --admin: #7c3aed;
+            --admin-soft: #efe7fe;
+            --user: #0d9488;
+            --user-soft: #ddf4f1;
+            --green: #12804f;
+            --green-soft: #ddf5e7;
+            --red: #c02b36;
+            --red-soft: #fde4e4;
+            --amber: #8a5700;
+            --amber-soft: #ffefc2;
+            --sans:
+                ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background: var(--bg);
+            overflow: hidden;
+            color: var(--ink);
+            font-family: var(--sans);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        button {
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+            background: none;
+            border: 0;
+        }
+
+        #deck {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1280px;
+            height: 720px;
+            transform-origin: 0 0;
+            background: var(--bg);
+            overflow: hidden;
+        }
+
+        #deck::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(#d9d2c0 1px, transparent 1.3px);
+            background-size: 26px 26px;
+            opacity: 0.65;
+        }
+
+        .ic {
+            width: 1.1em;
+            height: 1.1em;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vertical-align: -0.15em;
+            flex: none;
+        }
+
+        code {
+            font-family: var(--mono);
+            background: #ece6d6;
+            color: #2a2f45;
+            padding: 1px 7px;
+            border-radius: 6px;
+            font-size: 0.86em;
+            font-weight: 600;
+        }
+
+        b {
+            font-weight: 750;
+        }
+
+        #top {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1280px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 0 28px;
+            z-index: 5;
+        }
+
+        #brand {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            min-width: 170px;
+        }
+
+        #brand strong {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+        }
+
+        #brand span {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #map {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+        }
+
+        #map button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 10px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--line);
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--muted);
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        #map button b {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: var(--soft);
+            font-size: 11px;
+            flex: none;
+            transition: all 0.3s;
+        }
+
+        #map button.active {
+            background: var(--ink);
+            color: #fff;
+            border-color: var(--ink);
+            box-shadow: 0 6px 16px -8px rgba(27, 33, 51, 0.6);
+        }
+
+        #map button.active b {
+            background: #fff;
+            color: var(--ink);
+        }
+
+        #map button:hover {
+            border-color: var(--ink);
+        }
+
+        #stage {
+            position: absolute;
+            left: 0;
+            top: 60px;
+            width: 1280px;
+            height: 560px;
+            z-index: 2;
+        }
+
+        .scene {
+            position: absolute;
+            inset: 0;
+            visibility: hidden;
+            opacity: 0;
+            transform: translateX(34px);
+            transition:
+                opacity 0.4s ease,
+                transform 0.4s ease,
+                visibility 0s 0.4s;
+        }
+
+        .scene.out {
+            transform: translateX(-34px);
+        }
+
+        .scene.active {
+            visibility: visible;
+            opacity: 1;
+            transform: none;
+            transition:
+                opacity 0.55s ease 0.1s,
+                transform 0.55s ease 0.1s,
+                visibility 0s;
+        }
+
+        .sh {
+            position: absolute;
+            left: 48px;
+            right: 48px;
+            top: 4px;
+        }
+
+        .eb {
+            font-size: 12.5px;
+            letter-spacing: 0.13em;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 800;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .eb .n {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--ink);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            letter-spacing: 0;
+            font-size: 12px;
+        }
+
+        .eb em {
+            font-style: normal;
+            font-weight: 700;
+            text-transform: none;
+            letter-spacing: 0;
+            background: #e9e3d3;
+            border-radius: 99px;
+            padding: 2px 10px;
+            font-size: 12px;
+        }
+
+        .sh h2 {
+            font-size: 33px;
+            font-weight: 850;
+            letter-spacing: -0.025em;
+            margin-top: 5px;
+            line-height: 1.1;
+        }
+
+        .body {
+            position: absolute;
+            left: 48px;
+            right: 48px;
+            top: 90px;
+            bottom: 6px;
+        }
+
+        [data-s],
+        [data-e],
+        [data-at] {
+            opacity: 0;
+            transform: translateY(12px);
+            transition:
+                opacity 0.5s ease,
+                transform 0.5s ease;
+            pointer-events: none;
+        }
+
+        [data-s].on,
+        [data-e].on,
+        [data-at].on {
+            opacity: 1;
+            transform: none;
+            pointer-events: auto;
+        }
+
+        .instant,
+        .instant * {
+            transition: none !important;
+            animation: none !important;
+        }
+
+        #cap {
+            position: absolute;
+            left: 0;
+            top: 620px;
+            width: 1280px;
+            height: 62px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 0 90px;
+            font-size: 23px;
+            font-weight: 700;
+            line-height: 1.25;
+            letter-spacing: -0.012em;
+            background: #fff;
+            border-top: 1px solid var(--line);
+            border-bottom: 1px solid var(--line);
+            z-index: 5;
+        }
+
+        #cap span {
+            transition:
+                opacity 0.22s ease,
+                transform 0.22s ease;
+            display: block;
+        }
+
+        #cap span.swap {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+
+        #cap code {
+            font-size: 0.82em;
+        }
+
+        #ctl {
+            position: absolute;
+            left: 0;
+            top: 682px;
+            width: 1280px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 26px;
+            z-index: 5;
+        }
+
+        .cgrp {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 260px;
+        }
+
+        .cgrp.r {
+            justify-content: flex-end;
+        }
+
+        .cb2 {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #fff;
+            border: 1px solid var(--line);
+            transition: all 0.2s;
+        }
+
+        .cb2:hover {
+            border-color: var(--ink);
+            transform: translateY(-1px);
+        }
+
+        .cb2 .ic {
+            width: 16px;
+            height: 16px;
+        }
+
+        #bPlay {
+            width: 40px;
+            height: 40px;
+            background: var(--ink);
+            color: #fff;
+            border-color: var(--ink);
+        }
+
+        #bPlay .ic {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        #bPlay .pa {
+            display: none;
+        }
+
+        #bPlay.playing .pa {
+            display: block;
+        }
+
+        #bPlay.playing .pl,
+        #bPlay.ended .pl {
+            display: none;
+        }
+
+        #bPlay .rp {
+            display: none;
+        }
+
+        #bPlay.ended .rp {
+            display: block;
+        }
+
+        .sp {
+            font-size: 12px;
+            font-weight: 800;
+            padding: 0 10px;
+            width: auto;
+            border-radius: 99px;
+            height: 30px;
+        }
+
+        #dots {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            min-width: 260px;
+        }
+
+        #dots i {
+            width: 8px;
+            height: 8px;
+            border-radius: 99px;
+            background: #d6cfbe;
+            transition: all 0.3s;
+        }
+
+        #dots i.d {
+            background: var(--ink);
+        }
+
+        #dots i.c {
+            width: 22px;
+            background: var(--ink);
+        }
+
+        #dots small {
+            margin-left: 8px;
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        #prog {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 1280px;
+            height: 5px;
+            display: flex;
+            gap: 2px;
+            z-index: 6;
+        }
+
+        .seg {
+            flex: var(--w);
+            background: #dcd5c4;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .seg::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: -9px;
+            bottom: 0;
+        }
+
+        .seg i {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: var(--ink);
+            transition: width 0.4s;
+        }
+
+        .seg:hover {
+            background: #c9c1ac;
+        }
+
+        #rotate {
+            display: none;
+        }
+
+        @media (orientation: portrait) and (max-width: 700px) {
+            #rotate {
+                display: grid;
+                position: fixed;
+                inset: 0;
+                place-items: center;
+                background: var(--bg);
+                z-index: 99;
+                text-align: center;
+                padding: 30px;
+                font-weight: 700;
+                font-size: 18px;
+            }
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow:
+                0 1px 0 rgba(27, 33, 51, 0.04),
+                0 14px 28px -18px rgba(27, 33, 51, 0.35);
+        }
+
+        .actor {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            text-align: center;
+        }
+
+        .actor .av {
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: var(--c-soft);
+            color: var(--c);
+            border: 2.5px solid var(--c);
+        }
+
+        .actor .av .ic {
+            width: 34px;
+            height: 34px;
+        }
+
+        .actor b {
+            font-size: 17px;
+        }
+
+        .actor small {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .actor.sm .av {
+            width: 54px;
+            height: 54px;
+        }
+
+        .actor.sm .av .ic {
+            width: 26px;
+            height: 26px;
+        }
+
+        .actor.sm b {
+            font-size: 15px;
+        }
+
+        .partner {
+            --c: var(--partner);
+            --c-soft: var(--partner-soft);
+        }
+
+        .admin {
+            --c: var(--admin);
+            --c-soft: var(--admin-soft);
+        }
+
+        .user {
+            --c: var(--user);
+            --c-soft: var(--user-soft);
+        }
+
+        [data-state="pending"] {
+            --sc: #8a5700;
+            --sbg: #ffefc2;
+            --sl: "Pending";
+            --sf: "isActive: false";
+            --sb: #e8b63a;
+        }
+
+        [data-state="active"] {
+            --sc: #0f6b43;
+            --sbg: #d9f3e3;
+            --sl: "Active";
+            --sf: "isActive: true";
+            --sb: #2fae72;
+        }
+
+        [data-state="inactive"] {
+            --sc: #a1232d;
+            --sbg: #fce0e0;
+            --sl: "Inactive";
+            --sf: "isActive: false";
+            --sb: #e5686f;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 99px;
+            font-weight: 800;
+            font-size: 13px;
+            background: var(--sbg);
+            color: var(--sc);
+            transition:
+                background 0.4s,
+                color 0.4s;
+        }
+
+        .chip::after {
+            content: var(--sl);
+        }
+
+        .tcard {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            background: #fff;
+            border: 1.5px solid var(--line);
+            border-radius: 14px;
+            transition:
+                border-color 0.4s,
+                opacity 0.5s,
+                transform 0.5s,
+                background 0.4s,
+                box-shadow 0.4s;
+        }
+
+        .tcard .tic {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            background: var(--soft);
+            display: grid;
+            place-items: center;
+            flex: none;
+        }
+
+        .tcard .tic .ic {
+            width: 22px;
+            height: 22px;
+        }
+
+        .tcard .tt b {
+            font-size: 16px;
+            display: block;
+        }
+
+        .tcard .tt small {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .tcard .ts {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .tcard[data-state] {
+            border-color: color-mix(in srgb, var(--sb) 55%, #fff);
+        }
+
+        .gone {
+            opacity: 0 !important;
+            max-height: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border-width: 0 !important;
+            overflow: hidden;
+            transform: scale(0.96);
+        }
+
+        .collapsible {
+            max-height: 80px;
+            transition:
+                max-height 0.55s ease,
+                opacity 0.4s ease,
+                margin 0.55s ease,
+                padding 0.55s ease,
+                transform 0.5s,
+                border-width 0.5s,
+                background 0.4s,
+                border-color 0.4s;
+        }
+
+        .method {
+            font: 800 11.5px var(--mono);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: #fff;
+            letter-spacing: 0.02em;
+            flex: none;
+        }
+
+        .method.put {
+            background: #e08a00;
+        }
+
+        .cb {
+            background: #1b2133;
+            color: #e7eaf4;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font: 14.5px/1.6 var(--mono);
+            white-space: pre;
+            text-align: left;
+
+        }
+
+        .cb .k {
+            color: #8fb6ff;
+        }
+
+        .cb .s {
+            color: #9be3ae;
+        }
+
+        .cb .n {
+            color: #ffd27a;
+        }
+
+        .cb .r {
+            color: #ff9a9a;
+        }
+
+        .cb .c {
+            color: #8b93aa;
+        }
+
+        .cb .g {
+            color: #7ee2a8;
+        }
+
+        .cb .hl {
+            background: rgba(255, 210, 122, 0.2);
+            border-radius: 4px;
+            padding: 0 4px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 14px;
+            border: 2px solid;
+            transition: all 0.3s;
+        }
+
+        .btn.rj {
+            background: #fff;
+            color: var(--red);
+            border-color: var(--red);
+        }
+
+        .btn.dk {
+            background: #fff;
+            color: var(--ink);
+            border-color: var(--ink);
+        }
+
+        .btn.press {
+            box-shadow: 0 0 0 6px rgba(124, 58, 237, 0.3);
+            transform: scale(1.07);
+        }
+
+        .note {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .note.amber {
+            background: var(--amber-soft);
+            color: var(--amber);
+        }
+
+        .note.green {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .note.red {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .note.ink {
+            background: var(--ink);
+            color: #fff;
+        }
+
+        .note.blue {
+            background: var(--partner-soft);
+            color: #1747b8;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-7px);
+            }
+
+            40% {
+                transform: translateX(7px);
+            }
+
+            60% {
+                transform: translateX(-5px);
+            }
+
+            80% {
+                transform: translateX(4px);
+            }
+        }
+
+        .shake {
+            animation: shake 0.5s ease;
+        }
+
+        .board h4 {
+            font-size: 12.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .board {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 170px;
+            padding: 12px 14px;
+            min-height: 130px;
+        }
+
+        .slot {
+            height: 60px;
+            border: 2px dashed #cfc8b4;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            color: #a39c88;
+            font-weight: 700;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .slotfill {
+            position: absolute;
+            inset: -2px;
+            background: #fff;
+            border: 1.5px solid var(--sb);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 12px;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.5s;
+        }
+
+        .slotfill.show {
+            opacity: 1;
+            transform: none;
+        }
+
+        .slotfill b {
+            font-size: 14.5px;
+        }
+
+        .slotfill .chip {
+            margin-left: auto;
+        }
+
+        .fn {
+            position: absolute;
+            top: 70px;
+            width: 150px;
+            height: 84px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 3px;
+            background: #fff;
+            border: 2px solid var(--line);
+            border-radius: 14px;
+            transition: all 0.4s;
+            font-size: 14.5px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .fn small {
+            font: 600 11.5px var(--mono);
+            color: var(--muted);
+            word-break: break-all;
+        }
+
+        .fn.set {
+            border-color: var(--green);
+        }
+
+        .qz-q {
+            padding: 16px 24px;
+            font-size: 22px;
+            font-weight: 750;
+            line-height: 1.3;
+            letter-spacing: -0.015em;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .qz-q .qi {
+            width: 44px;
+            height: 44px;
+            border-radius: 13px;
+            background: var(--ink);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            flex: none;
+            font-weight: 900;
+        }
+
+        .qz-o {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .opt {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            text-align: left;
+            background: #fff;
+            border: 2px solid var(--line);
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 16.5px;
+            min-height: 70px;
+            transition: all 0.35s;
+            width: 100%;
+        }
+
+        .opt .lt {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: var(--soft);
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+            flex: none;
+            transition: all 0.35s;
+        }
+
+        .opt:hover {
+            border-color: var(--ink);
+        }
+
+        .opt code {
+            font-size: 0.9em;
+        }
+
+        .opt.right {
+            border-color: var(--green);
+            background: var(--green-soft);
+        }
+
+        .opt.right .lt {
+            background: var(--green);
+            color: #fff;
+        }
+
+        .opt.wrong {
+            border-color: var(--red);
+            background: var(--red-soft);
+        }
+
+        .opt.wrong .lt {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .opt.fade {
+            opacity: 0.42;
+        }
+
+        .qz-x {
+            margin-top: 12px;
+            padding: 14px 20px;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+            font-size: 17px;
+            line-height: 1.4;
+            font-weight: 600;
+        }
+
+        .qz-x .ic {
+            width: 28px;
+            height: 28px;
+            color: var(--green);
+            flex: none;
+            margin-top: 2px;
+        }
+
+        .vr {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            border: 1.5px solid var(--line);
+            border-radius: 11px;
+            background: #fbfaf6;
+            font-weight: 750;
+            font-size: 15px;
+            max-height: 56px;
+            position: relative;
+        }
+
+        .vr .ic {
+            width: 20px;
+            height: 20px;
+            color: var(--muted);
+        }
+
+        .vr .chip {
+            margin-left: auto;
+        }
+
+        .rk {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            height: 300px;
+            margin-top: 10px;
+        }
+
+        .rkc {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .rkc .no {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--ink);
+            color: #fff;
+            display: grid;
+            place-items: center;
+            font-weight: 900;
+        }
+
+        .rkc h3 {
+            font-size: 21px;
+            line-height: 1.2;
+            letter-spacing: -0.015em;
+        }
+
+        .rkc .mini2 {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 4px;
+            flex-wrap: nowrap;
+        }
+
+        .rkc .mini2 .pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 9px;
+            border-radius: 11px;
+            background: var(--soft);
+            font-weight: 800;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .rkc .mini2>.ic {
+            width: 14px;
+            height: 14px;
+        }
+
+        .rkc .mini2 .ic {
+            color: #a39c88;
+        }
+
+        .rkc .q {
+            margin-top: auto;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--ink2);
+            padding-top: 12px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .rk-end {
+            margin-top: 18px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .cs {
+            display: grid;
+            grid-template-columns: 240px 540px 1fr;
+            gap: 28px;
+            height: 446px;
+        }
+
+        .cs-l {
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .tree {
+            position: relative;
+            width: 540px;
+            height: 370px;
+            margin-top: 6px;
+        }
+
+        .tree .tcard.big {
+            position: absolute;
+            left: 140px;
+            top: 0;
+            width: 260px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 14px 16px;
+            border-width: 2px;
+        }
+
+        .tree .tcard.big .r1 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .ln1 {
+            position: absolute;
+            background: #c2bba6;
+            transition: background 0.5s;
+        }
+
+        .cut .ln1 {
+            background: var(--red);
+        }
+
+        .shw {
+            position: absolute;
+            top: 178px;
+            width: 168px;
+            padding: 12px;
+            border: 2px solid var(--line);
+            border-radius: 14px;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            transition: all 0.45s;
+        }
+
+        .shw .t {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 14.5px;
+        }
+
+        .shw .t .ic {
+            color: var(--muted);
+        }
+
+        .shw[data-state] {
+            border-color: color-mix(in srgb, var(--sb) 55%, #fff);
+        }
+
+        .shw[data-state="inactive"] {
+            background: #fbf2f2;
+        }
+
+        .cs-r {
+            padding-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .cs-r .cb {
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+
+        .cs-r .note {
+            align-self: flex-start;
+            line-height: 1.35;
+        }
+
+        .dl {
+            display: grid;
+            grid-template-columns: 240px 460px 1fr;
+            gap: 26px;
+            height: 446px;
+        }
+
+        .dl-l {
+            padding-top: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .dl-m {
+            position: relative;
+            padding-top: 8px;
+        }
+
+        .dl-m .tcard.big {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 14px 16px;
+            border-width: 2px;
+            transition: all 0.7s ease;
+        }
+
+        .dl-m .tcard.big .r1 {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .dl-m .tcard.big.deleted {
+            opacity: 0;
+            transform: scale(0.85);
+        }
+
+        .dshows {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .dshows .vr {
+            max-height: 56px;
+        }
+
+        .dl-r {
+            padding-top: 8px;
+        }
+
+        .srv {
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .srv h4 {
+            font-size: 13px;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--muted);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .srv .cb {
+            font-size: 14.5px;
+        }
+
+        .cnt {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .cnt .num {
+            font: 900 34px var(--mono);
+            background: var(--soft);
+            min-width: 56px;
+            text-align: center;
+            border-radius: 12px;
+            padding: 0 10px;
+            transition:
+                background 0.4s,
+                color 0.4s;
+        }
+
+        .verdict {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 17px;
+        }
+
+        .verdict.red {
+            background: var(--red-soft);
+            color: var(--red);
+        }
+
+        .verdict.green {
+            background: var(--green-soft);
+            color: var(--green);
+        }
+
+        .ra {
+            display: grid;
+            grid-template-columns: 330px 1fr 300px;
+            gap: 22px;
+            height: 446px;
+        }
+
+        .ra-l {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding-top: 4px;
+        }
+
+        .req {
+            width: 100%;
+            padding: 12px 14px;
+        }
+
+        .req .rh {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            font: 700 13px var(--mono);
+            margin-bottom: 8px;
+        }
+
+        .req .cb {
+            font-size: 14.5px;
+            line-height: 1.7;
+        }
+
+        .strike {
+            text-decoration: line-through;
+            text-decoration-color: var(--red);
+            text-decoration-thickness: 2.5px;
+            color: #ff9a9a;
+        }
+
+        .ra-m {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 14px;
+            padding-top: 6px;
+        }
+
+        .ra-m .tcard.big {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            padding: 14px 18px;
+            border-width: 2px;
+        }
+
+        .ra-m .tcard.big .r1 {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .ra-m .cb {
+            font-size: 15.5px;
+        }
+
+        .ra-r .board {
+            position: static;
+            margin-top: 14px;
+        }
+
+        .ra-r .actor {
+            margin: 0 auto;
+        }
+
+        .lockbn {
+            margin-top: 14px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .screen {
+            height: 14px;
+            border-radius: 50% 50% 0 0/100% 100% 0 0;
+            background: linear-gradient(#cfc8b4, #ede8da);
+            margin: 0 40px 22px;
+            text-align: center;
+        }
+
+        .screen span {
+            position: relative;
+            top: 18px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--muted);
+            letter-spacing: 0.2em;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            [data-s],
+            [data-e],
+            [data-at] {
+                transform: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+        <defs>
+            <symbol id="i-building" viewBox="0 0 24 24">
+                <path d="M3 21h18M4 9.5 12 4l8 5.5M6 10.5v9M10 10.5v9M14 10.5v9M18 10.5v9" />
+            </symbol>
+            <symbol id="i-film" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2" />
+                <path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4" />
+            </symbol>
+            <symbol id="i-users" viewBox="0 0 24 24">
+                <circle cx="9" cy="8" r="3.5" />
+                <path
+                    d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5M16 4.8a3.5 3.5 0 010 6.4M18 14.8c2.2.6 3.5 2.2 3.5 5.2" />
+            </symbol>
+            <symbol id="i-shield" viewBox="0 0 24 24">
+                <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" />
+                <path d="M8.5 12l2.5 2.5 4.5-5" />
+            </symbol>
+            <symbol id="i-briefcase" viewBox="0 0 24 24">
+                <rect x="3" y="7" width="18" height="13" rx="2" />
+                <path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18" />
+            </symbol>
+            <symbol id="i-check" viewBox="0 0 24 24">
+                <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </symbol>
+            <symbol id="i-x" viewBox="0 0 24 24">
+                <path d="M6 6l12 12M18 6L6 18" />
+            </symbol>
+            <symbol id="i-lock" viewBox="0 0 24 24">
+                <rect x="5" y="11" width="14" height="10" rx="2" />
+                <path d="M8 11V8a4 4 0 018 0v3" />
+            </symbol>
+            <symbol id="i-ticket" viewBox="0 0 24 24">
+                <path
+                    d="M3 9V7a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 6v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-6z" />
+                <path d="M14 6.5v11" stroke-dasharray="2 2.5" />
+            </symbol>
+            <symbol id="i-trash" viewBox="0 0 24 24">
+                <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+            </symbol>
+            <symbol id="i-pencil" viewBox="0 0 24 24">
+                <path d="M4 20l1-4L16 5l3 3L8 19zM14 7l3 3" />
+            </symbol>
+            <symbol id="i-arrow" viewBox="0 0 24 24">
+                <path d="M4 12h16M14 6l6 6-6 6" />
+            </symbol>
+            <symbol id="i-warning" viewBox="0 0 24 24">
+                <path d="M12 3.5l9.5 16.5h-19z" />
+                <path d="M12 10v4.5M12 17.5h.01" />
+            </symbol>
+            <symbol id="i-layers" viewBox="0 0 24 24">
+                <path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5" />
+            </symbol>
+            <symbol id="i-bulb" viewBox="0 0 24 24">
+                <path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z" />
+            </symbol>
+        </defs>
+    </svg>
+
+    <div id="deck">
+        <div id="top">
+            <div id="brand"><strong>VYBE</strong><span>Lab 5 · Moderation</span></div>
+        </div>
+        <div id="stage"></div>
+        <div id="cap"><span></span></div>
+        <div id="ctl">
+            <div id="dots"></div>
+            <div class="cgrp">
+                <button class="cb2" id="bPrevS" title="Previous scene">
+                    <svg class="ic" viewBox="0 0 24 24">
+                        <path d="M6 5v14M19 5l-9 7 9 7z" />
+                    </svg>
+                </button>
+                <button class="cb2" id="bPrev" title="Back (←)">
+                    <svg class="ic" viewBox="0 0 24 24">
+                        <path d="M15 5l-7 7 7 7" />
+                    </svg>
+                </button>
+                <button class="cb2" id="bPlay" title="Play / pause (space)">
+                    <svg class="ic pl" viewBox="0 0 24 24">
+                        <path d="M8 4.5l12 7.5-12 7.5z" />
+                    </svg><svg class="ic pa" viewBox="0 0 24 24">
+                        <path d="M7 4h3.5v16H7zM13.5 4H17v16h-3.5z" />
+                    </svg><svg class="ic rp" viewBox="0 0 24 24" style="fill: none">
+                        <path d="M4 12a8 8 0 112.5 5.8M4 19v-5h5" />
+                    </svg>
+                </button>
+                <button class="cb2" id="bNext" title="Next (→)">
+                    <svg class="ic" viewBox="0 0 24 24">
+                        <path d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+                <button class="cb2" id="bNextS" title="Next scene">
+                    <svg class="ic" viewBox="0 0 24 24">
+                        <path d="M18 5v14M5 5l9 7-9 7z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="cgrp r">
+                <button class="cb2 sp" id="bSpeed" title="Speed">1×</button>
+                <button class="cb2" id="bFull" title="Full screen (F)">
+                    <svg class="ic" viewBox="0 0 24 24">
+                        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="prog"></div>
+    </div>
+    <div id="rotate">Please rotate your phone sideways, or open this on a laptop, for the best view.</div>
+
+    <div id="src" hidden>
+        <section class="scene" id="risks" data-sec="6" data-title="What could go wrong in this workflow?">
+            <div class="body" style="top: 116px">
+                <div class="rk">
+                    <div class="rkc card" data-s="0">
+                        <div class="no">1</div>
+                        <h3>Approve, then a booking, then reject</h3>
+                        <div class="mini2">
+                            <span class="pill"><i data-i="shield"></i>Approved</span><i data-i="arrow"></i><span
+                                class="pill"><i data-i="ticket"></i>Booked</span><i data-i="arrow"></i><span
+                                class="pill"><i data-i="x"></i>Rejected</span>
+                        </div>
+                        <div class="q">What happens to its shows and bookings?</div>
+                    </div>
+                    <div class="rkc card" data-s="1">
+                        <div class="no">2</div>
+                        <h3>Partner edits an approved theatre</h3>
+                        <div class="mini2">
+                            <span class="pill"><i data-i="check"></i>Approved</span><i data-i="arrow"></i><span
+                                class="pill"><i data-i="pencil"></i>Edited</span>
+                        </div>
+                        <div class="q">Go live right away, or be reviewed again?</div>
+                    </div>
+                    <div class="rkc card" data-s="2">
+                        <div class="no">3</div>
+                        <h3>Partner deletes a theatre that has shows</h3>
+                        <div class="mini2">
+                            <span class="pill"><i data-i="film"></i>Has shows</span><i data-i="arrow"></i><span
+                                class="pill"><i data-i="trash"></i>Delete</span>
+                        </div>
+                        <div class="q">Should that be allowed?</div>
+                    </div>
+                </div>
+                <div class="rk-end" data-s="3">
+                    <span class="note ink" style="font-size: 17px; padding: 10px 20px"><i data-i="bulb"></i>We fix the
+                        important ones today. Bookings come in Lab 6.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="scene" id="cascade" data-sec="6"
+            data-title="Fix 1 · Rejecting a theatre switches off its shows">
+            <div class="body" style="top: 126px">
+                <div class="cs">
+                    <div class="cs-l">
+                        <div class="actor admin">
+                            <div class="av"><i data-i="shield"></i></div>
+                            <b>Admin</b>
+                        </div>
+                        <span class="btn rj" id="csBtn"><i data-i="x"></i>Reject theatre</span>
+                    </div>
+                    <div class="tree" id="tree">
+                        <div class="tcard big" id="csT" data-state="active">
+                            <div class="r1">
+                                <span class="tic"><i data-i="building"></i></span>
+                                <div class="tt"><b>PVR Noida</b><small>Theatre</small></div>
+                                <div class="ts"><span class="chip"></span></div>
+                            </div>
+                        </div>
+                        <div class="ln1" style="left: 269px; top: 84px; width: 2px; height: 46px"></div>
+                        <div class="ln1" style="left: 84px; top: 129px; width: 372px; height: 2px"></div>
+                        <div class="ln1" style="left: 83px; top: 130px; width: 2px; height: 48px"></div>
+                        <div class="ln1" style="left: 269px; top: 130px; width: 2px; height: 48px"></div>
+                        <div class="ln1" style="left: 455px; top: 130px; width: 2px; height: 48px"></div>
+                        <div class="shw" data-state="active" style="left: 0">
+                            <div class="t"><i data-i="film"></i>Show A</div>
+                            <span class="chip"></span>
+                        </div>
+                        <div class="shw" data-state="active" style="left: 186px">
+                            <div class="t"><i data-i="film"></i>Show B</div>
+                            <span class="chip"></span>
+                        </div>
+                        <div class="shw" data-state="active" style="left: 372px">
+                            <div class="t"><i data-i="film"></i>Show C</div>
+                            <span class="chip"></span>
+                        </div>
+                    </div>
+                    <div class="cs-r">
+                        <!-- prettier-ignore -->
+                        <div class="cb" data-s="2">Show.updateMany(
+  { theatre: theatre._id },
+  { <span class="n hl">isActive: false</span> }
+)</div>
+                        <span class="note blue" data-s="3"><i data-i="layers"></i>updateMany: one call, many
+                            documents</span>
+                        <span class="note amber" data-s="3"><i data-i="warning"></i>Like a lost licence: every screening
+                            is cancelled</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="scene" id="delguard" data-sec="6"
+            data-title="Fix 2 · No deleting a theatre that still has shows">
+            <div class="body" style="top: 126px">
+                <div class="dl">
+                    <div class="dl-l">
+                        <div class="actor partner">
+                            <div class="av"><i data-i="briefcase"></i></div>
+                            <b>Partner</b>
+                        </div>
+                        <span class="btn dk" id="dlBtn"><i data-i="trash"></i><span id="dlTxt">Delete
+                                theatre</span></span>
+                    </div>
+                    <div class="dl-m">
+                        <div class="tcard big" id="dlT" data-state="active">
+                            <div class="r1">
+                                <span class="tic"><i data-i="building"></i></span>
+                                <div class="tt"><b>PVR Noida</b><small>Theatre</small></div>
+                                <div class="ts"><span class="chip"></span></div>
+                            </div>
+                        </div>
+                        <div class="dshows">
+                            <div class="vr collapsible" data-state="active">
+                                <i data-i="film"></i>Show A<span class="chip"></span>
+                            </div>
+                            <div class="vr collapsible" data-state="active">
+                                <i data-i="film"></i>Show B<span class="chip"></span>
+                            </div>
+                            <div class="vr collapsible" data-state="active">
+                                <i data-i="film"></i>Show C<span class="chip"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dl-r">
+                        <div class="srv card" data-s="1">
+                            <h4><i data-i="shield"></i>Server check</h4>
+                            <!-- prettier-ignore -->
+                            <div class="cb">Show.countDocuments({ theatre: id })</div>
+                            <div class="cnt">count = <span class="num" id="dlNum">3</span></div>
+                            <div style="position: relative; height: 52px">
+                                <div class="verdict red" data-at="1" style="position: absolute; inset: 0">
+                                    <i data-i="x"></i>400 · Remove all shows first
+                                </div>
+                                <div class="verdict green" data-at="3" style="position: absolute; inset: 0">
+                                    <i data-i="check"></i>200 · Theatre deleted
+                                </div>
+                            </div>
+                        </div>
+                        <span class="note amber" data-at="1,2" style="margin-top: 14px"><i data-i="warning"></i>No
+                            orphan shows left pointing at nothing</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="scene" id="reapprove" data-sec="6"
+            data-title="Fix 3 · Edits to approved content are reviewed again">
+            <div class="body" style="top: 116px">
+                <div class="ra">
+                    <div class="ra-l">
+                        <div class="actor partner sm">
+                            <div class="av"><i data-i="briefcase"></i></div>
+                            <b>Partner edits</b>
+                        </div>
+                        <div class="req card" data-s="1">
+                            <div class="rh"><span class="method put">PUT</span>/api/theatres/:id</div>
+                            <!-- prettier-ignore -->
+                            <div class="cb">{
+  address: <span class="s">"12 New Road"</span>,
+  isActive: <span class="n" id="raTrue">true</span>
+}</div>
+                        </div>
+                    </div>
+                    <div class="ra-m">
+                        <div class="tcard big" id="raT" data-state="active">
+                            <div class="r1">
+                                <span class="tic"><i data-i="building"></i></span>
+                                <div class="tt"><b>PVR Noida</b><small id="raAddr">Old address</small></div>
+                                <div class="ts"><span class="chip"></span></div>
+                            </div>
+                        </div>
+                        <!-- prettier-ignore -->
+                        <div class="cb" data-s="2">{ ...req.body, <span class="n hl">isActive: false</span> }</div>
+                        <div style="position: relative; height: 46px">
+                            <div class="lockbn" data-at="4" style="position: absolute; inset: 0; margin: 0">
+                                <span class="note" style="background: var(--admin-soft); color: #5b21b6"><i
+                                        data-i="shield"></i>Admin approves again</span>
+                            </div>
+                            <div class="lockbn" data-at="5" style="position: absolute; inset: 0; margin: 0">
+                                <span class="note ink"><i data-i="lock"></i>Only the admin endpoint can set isActive to
+                                    true</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ra-r">
+                        <div class="actor user sm">
+                            <div class="av"><i data-i="users"></i></div>
+                            <b>Users</b>
+                        </div>
+                        <div class="board card">
+                            <h4>Public listing</h4>
+                            <div class="slot">
+                                hidden
+                                <div class="slotfill" id="raSlot" data-state="active">
+                                    <i data-i="building"></i><b>PVR Noida</b><span class="chip"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="scene" id="quiz3" data-sec="6" data-title="Quick quiz">
+            <div class="body"></div>
+        </section>
+    </div>
+    <script>
+        (() => {
+            "use strict";
+
+            const $ = (s, r = document) => r.querySelector(s);
+            const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+            const ICON = (n) => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+            const SVGNS = "http://www.w3.org/2000/svg";
+
+            /* ---------------- section info ---------------- */
+            const SECTION = { number: 6, name: "Workflow Integrity", minutes: 15 };
+
+            /* ---------------- helpers ---------------- */
+            function hydrateIcons(root) {
+                $$("i[data-i]", root).forEach((i) => {
+                    const svg = document.createElementNS(SVGNS, "svg");
+                    svg.setAttribute("class", ("ic " + (i.getAttribute("class") || "")).trim());
+                    svg.setAttribute("viewBox", "0 0 24 24");
+                    const use = document.createElementNS(SVGNS, "use");
+                    use.setAttribute("href", "#i-" + i.dataset.i);
+                    svg.appendChild(use);
+                    if (i.getAttribute("style")) svg.setAttribute("style", i.getAttribute("style"));
+                    i.replaceWith(svg);
+                });
+            }
+
+            const seq = (el, list) => {
+                el._t = el._t || [];
+                list.forEach(([ms, fn]) => el._t.push(setTimeout(fn, ms)));
+            };
+            const clearSeq = (el) => {
+                (el._t || []).forEach(clearTimeout);
+                el._t = [];
+            };
+
+            function applyGeneric(el, step) {
+                $$("[data-s],[data-e],[data-at]", el).forEach((n) => {
+                    let on = true;
+                    if (n.dataset.s !== undefined) on = on && step >= +n.dataset.s;
+                    if (n.dataset.e !== undefined) on = on && step < +n.dataset.e;
+                    if (n.dataset.at !== undefined) on = on && n.dataset.at.split(",").map(Number).includes(step);
+                    n.classList.toggle("on", on);
+                });
+            }
+
+            /* ---------------- quiz ---------------- */
+            const QUIZ = {
+                q: "A partner updates the address of an approved theatre. The update uses <code>{ ...req.body, isActive: false }</code>. What happens to its visibility?",
+                o: [
+                    "Nothing, it stays approved",
+                    "It is hidden from the public until an admin re-approves it",
+                    "The theatre is deleted",
+                    "Its shows are also deactivated",
+                ],
+                a: 1,
+                x: "<code>isActive: false</code> moves it back to pending, so the public filter hides it until an admin approves again.",
+            };
+
+            function quizReg() {
+                const letter = "ABCD"[QUIZ.a];
+                return {
+                    caps: [
+                        "<b>Quiz time</b> · pick an answer, or wait and watch.",
+                        `The answer is <b>${letter}</b>.`,
+                    ],
+                    d: [12000, 8000],
+                    build(el) {
+                        $(".body", el).innerHTML = `
+          <div class="qz-q card"><div class="qi">Q</div><div>${QUIZ.q}</div></div>
+          <div class="qz-o">
+            ${QUIZ.o
+                                .map(
+                                    (t, i) =>
+                                        `<button class="opt" data-k="${i}"><span class="lt">${"ABCD"[i]}</span><span>${t}</span></button>`,
+                                )
+                                .join("")}
+          </div>
+          <div class="qz-x card" data-s="1">${ICON("bulb")}<div><b>Answer ${letter}.</b> ${QUIZ.x}</div></div>`;
+                        $$(".opt", el).forEach((b) =>
+                            b.addEventListener("click", () => {
+                                if (el._sel == null) el._sel = +b.dataset.k;
+                                if (P.step < 1) go(P.si, 1);
+                            }),
+                        );
+                    },
+                    enter(el) {
+                        el._sel = null;
+                    },
+                    apply(s, el) {
+                        $$(".opt", el).forEach((b, i) => {
+                            b.classList.toggle("right", s >= 1 && i === QUIZ.a);
+                            b.classList.toggle("wrong", s >= 1 && el._sel === i && i !== QUIZ.a);
+                            b.classList.toggle("fade", s >= 1 && i !== QUIZ.a && el._sel !== i);
+                        });
+                    },
+                };
+            }
+
+            /* ---------------- scene registry ---------------- */
+            const reg = {};
+
+            reg.risks = {
+                caps: [
+                    "Scenario 1 · Approved, then booked, then rejected. What happens next?",
+                    "Scenario 2 · A partner edits an approved theatre.",
+                    "Scenario 3 · A partner deletes a theatre that has shows.",
+                    "Real platforms must answer these. We fix the important ones now.",
+                ],
+                d: [4200, 3600, 3600, 4600],
+            };
+
+            reg.cascade = {
+                caps: [
+                    "An approved theatre with three live shows.",
+                    "The admin <b>rejects</b> the theatre…",
+                    "…so its shows are switched off too: a <b>cascading update</b>.",
+                    "Shows depend on their theatre. When the parent changes, the children follow.",
+                ],
+                d: [3200, 3000, 4800, 5600],
+                apply(s, el, inst) {
+                    clearSeq(el);
+                    $("#csT", el).dataset.state = s >= 1 ? "inactive" : "active";
+                    $("#csBtn", el).classList.toggle("press", s === 1);
+                    $("#tree", el).classList.toggle("cut", s >= 2);
+                    $$(".shw", el).forEach((sh, i) => {
+                        if (s === 2 && !inst) {
+                            seq(el, [
+                                [
+                                    350 + i * 450,
+                                    () => {
+                                        sh.dataset.state = "inactive";
+                                    },
+                                ],
+                            ]);
+                        } else {
+                            sh.dataset.state = s >= 2 ? "inactive" : "active";
+                        }
+                    });
+                },
+            };
+
+            reg.delguard = {
+                caps: [
+                    "A partner tries to delete a theatre that <b>still has shows</b>.",
+                    "The server counts its shows: <b>3</b>. Delete blocked with <b>400</b>.",
+                    "The partner removes the shows first…",
+                    "Count is <b>0</b>, so the theatre can go. No orphan shows left behind.",
+                ],
+                d: [3400, 4600, 4200, 4800],
+                apply(s, el, inst) {
+                    clearSeq(el);
+                    const rows = $$(".dshows .vr", el);
+                    const theatre = $("#dlT", el);
+                    const num = $("#dlNum", el);
+                    const setCount = (n) => {
+                        num.textContent = n;
+                        num.style.background = n === 0 ? "var(--green-soft)" : "";
+                        num.style.color = n === 0 ? "var(--green)" : "";
+                    };
+
+                    theatre.classList.toggle("deleted", s >= 3);
+                    $("#dlBtn", el).classList.toggle("press", s === 1 || s === 3);
+                    $("#dlTxt", el).textContent = s === 2 ? "Remove shows" : "Delete theatre";
+
+                    theatre.classList.remove("shake");
+                    if (s === 1 && !inst) {
+                        void theatre.offsetWidth;
+                        theatre.classList.add("shake");
+                    }
+
+                    if (s === 2 && !inst) {
+                        setCount(3);
+                        rows.forEach((r, i) => {
+                            r.classList.remove("gone");
+                            seq(el, [
+                                [
+                                    500 + i * 600,
+                                    () => {
+                                        r.classList.add("gone");
+                                        setCount(2 - i);
+                                    },
+                                ],
+                            ]);
+                        });
+                    } else {
+                        rows.forEach((r) => r.classList.toggle("gone", s >= 2));
+                        setCount(s >= 2 ? 0 : 3);
+                    }
+                },
+            };
+
+            reg.reapprove = {
+                caps: [
+                    "An approved theatre is live in the public list.",
+                    "The partner edits the address, even sending <code>isActive: true</code>.",
+                    "The server overrides it: <code>{ ...req.body, isActive: false }</code>.",
+                    "Back to <b>pending</b>: hidden from users until an admin re-approves.",
+                    "The admin approves again → live.",
+                    "Status changes happen only through <b>dedicated admin endpoints</b>.",
+                ],
+                d: [3200, 4200, 4400, 4400, 3400, 5200],
+                apply(s, el) {
+                    const state = s === 3 ? "pending" : "active";
+                    $("#raT", el).dataset.state = state;
+                    $("#raSlot", el).classList.toggle("show", state === "active");
+                    $("#raTrue", el).classList.toggle("strike", s >= 2);
+                    $("#raAddr", el).textContent = s >= 3 ? "12 New Road" : "Old Market Road";
+                },
+            };
+
+            reg.quiz3 = quizReg();
+
+            /* ---------------- player ---------------- */
+            const P = { si: 0, step: 0, playing: true, speed: 1, timer: null, ready: false, ended: false };
+            let S = [];
+            const stage = $("#stage");
+
+            function buildScenes() {
+                const src = $("#src");
+                $$("section.scene", src).forEach((sc) => stage.appendChild(sc));
+                src.remove();
+
+                S = $$(".scene", stage).map((el) => ({
+                    el,
+                    id: el.id,
+                    title: el.dataset.title || "",
+                    cfg: reg[el.id] || { caps: [""] },
+                }));
+
+                S.forEach((sc) => {
+                    if (sc.cfg.build) sc.cfg.build(sc.el);
+
+                    const head = document.createElement("div");
+                    head.className = "sh";
+                    head.innerHTML = `
+        <div class="eb"><span class="n">${SECTION.number}</span>${SECTION.name}<em>${SECTION.minutes} min</em></div>
+        <h2>${sc.title}</h2>`;
+                    sc.el.insertBefore(head, sc.el.firstChild);
+
+                    hydrateIcons(sc.el);
+                    sc.n = sc.cfg.caps.length;
+                });
+            }
+
+            function setCap(html, first) {
+                const span = $("#cap span");
+                clearTimeout(P.capT);
+                if (first) {
+                    span.innerHTML = html;
+                    return;
+                }
+                span.classList.add("swap");
+                P.capT = setTimeout(() => {
+                    span.innerHTML = html;
+                    span.classList.remove("swap");
+                }, 170);
+            }
+
+            function applyStep(sc, step, inst) {
+                clearSeq(sc.el);
+                applyGeneric(sc.el, step);
+                if (sc.cfg.apply) sc.cfg.apply(step, sc.el, !!inst);
+            }
+
+            function enter(sc, step, instant) {
+                const el = sc.el;
+                el.classList.add("instant");
+                $$("[data-s],[data-e],[data-at]", el).forEach((n) => n.classList.remove("on"));
+                if (sc.cfg.enter) sc.cfg.enter(el);
+                if (instant) {
+                    applyStep(sc, step, true);
+                } else {
+                    clearSeq(el);
+                    if (sc.cfg.apply) sc.cfg.apply(0, el, true);
+                }
+                void el.offsetWidth;
+                el.classList.remove("instant");
+                if (!instant) {
+                    requestAnimationFrame(() =>
+                        requestAnimationFrame(() => {
+                            if (S[P.si] === sc && P.step === 0) applyStep(sc, 0, false);
+                        }),
+                    );
+                }
+            }
+
+            function go(si, step, opt = {}) {
+                clearTimeout(P.timer);
+                si = Math.max(0, Math.min(S.length - 1, si));
+                const sc = S[si];
+                step = Math.max(0, Math.min(sc.n - 1, step));
+
+                const changed = si !== P.si || !P.ready || opt.reenter;
+                const first = !P.ready;
+
+                if (changed) {
+                    if (P.ready) {
+                        const old = S[P.si];
+                        clearSeq(old.el);
+                        old.el.classList.remove("active");
+                        old.el.classList.add("out");
+                    }
+                    sc.el.classList.remove("out");
+                    P.si = si;
+                    P.step = step;
+                    enter(sc, step, step > 0);
+                    sc.el.classList.add("active");
+                } else {
+                    P.step = step;
+                    applyStep(sc, step, false);
+                }
+
+                P.ready = true;
+                P.ended = false;
+                setCap(sc.cfg.caps[step], first);
+                updateUI();
+                schedule();
+            }
+
+            function schedule() {
+                clearTimeout(P.timer);
+                if (!P.playing || document.hidden) return;
+                const sc = S[P.si];
+                const d = Array.isArray(sc.cfg.d) ? sc.cfg.d[P.step] : sc.cfg.d;
+                P.timer = setTimeout(
+                    () => {
+                        if (!next()) finish();
+                    },
+                    (d || 3400) / P.speed,
+                );
+            }
+
+            function next() {
+                const sc = S[P.si];
+                if (P.step < sc.n - 1) {
+                    go(P.si, P.step + 1);
+                    return true;
+                }
+                if (P.si < S.length - 1) {
+                    go(P.si + 1, 0);
+                    return true;
+                }
+                return false;
+            }
+
+            function prev() {
+                if (P.step > 0) go(P.si, P.step - 1);
+                else if (P.si > 0) go(P.si - 1, S[P.si - 1].n - 1);
+            }
+
+            function nextScene() {
+                if (P.si < S.length - 1) go(P.si + 1, 0);
+            }
+
+            function prevScene() {
+                if (P.step > 0) go(P.si, 0, { reenter: true });
+                else if (P.si > 0) go(P.si - 1, 0);
+                else go(0, 0, { reenter: true });
+            }
+
+            function finish() {
+                P.playing = false;
+                P.ended = true;
+                updateUI();
+            }
+
+            function togglePlay() {
+                if (P.ended) {
+                    P.playing = true;
+                    go(0, 0);
+                    return;
+                }
+                P.playing = !P.playing;
+                updateUI();
+                schedule();
+            }
+
+            /* ---------------- UI ---------------- */
+            function buildUI() {
+                const prog = $("#prog");
+                S.forEach((sc, i) => {
+                    const seg = document.createElement("div");
+                    seg.className = "seg";
+                    seg.style.setProperty("--w", sc.n);
+                    seg.title = sc.title;
+                    seg.innerHTML = "<i></i>";
+                    seg.onclick = () => go(i, 0, { reenter: true });
+                    prog.appendChild(seg);
+                });
+            }
+
+            function updateUI() {
+                const sc = S[P.si];
+
+                const dots = $("#dots");
+                dots.innerHTML = "";
+                for (let i = 0; i < sc.n; i++) {
+                    const d = document.createElement("i");
+                    if (i < P.step) d.className = "d";
+                    else if (i === P.step) d.className = "c";
+                    dots.appendChild(d);
+                }
+                const label = document.createElement("small");
+                label.textContent = `Scene ${P.si + 1} of ${S.length}`;
+                dots.appendChild(label);
+
+                $$(".seg", $("#prog")).forEach((g, i) => {
+                    const pct = i < P.si ? 100 : i === P.si ? ((P.step + 1) / S[i].n) * 100 : 0;
+                    g.firstChild.style.width = pct + "%";
+                });
+
+                const play = $("#bPlay");
+                play.classList.toggle("playing", P.playing);
+                play.classList.toggle("ended", P.ended);
+                $("#bSpeed").textContent = P.speed + "×";
+            }
+
+            function resize() {
+                const k = Math.min(innerWidth / 1280, innerHeight / 720);
+                const deck = $("#deck");
+                deck.style.transform = `scale(${k})`;
+                deck.style.left = (innerWidth - 1280 * k) / 2 + "px";
+                deck.style.top = (innerHeight - 720 * k) / 2 + "px";
+            }
+
+            function init() {
+                buildScenes();
+                buildUI();
+                resize();
+                addEventListener("resize", resize);
+
+                $("#bPlay").onclick = togglePlay;
+                $("#bNext").onclick = () => next();
+                $("#bPrev").onclick = prev;
+                $("#bNextS").onclick = nextScene;
+                $("#bPrevS").onclick = prevScene;
+                $("#bSpeed").onclick = () => {
+                    const speeds = [1, 1.5, 0.75];
+                    P.speed = speeds[(speeds.indexOf(P.speed) + 1) % speeds.length];
+                    updateUI();
+                    schedule();
+                };
+                $("#bFull").onclick = () => {
+                    if (document.fullscreenElement) document.exitFullscreen();
+                    else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+                };
+
+                addEventListener("keydown", (e) => {
+                    const k = e.key;
+                    if (k === " ") {
+                        e.preventDefault();
+                        togglePlay();
+                    } else if (k === "ArrowRight") next();
+                    else if (k === "ArrowLeft") prev();
+                    else if (k === "ArrowDown" || k === "PageDown") nextScene();
+                    else if (k === "ArrowUp" || k === "PageUp") prevScene();
+                    else if (k === "f" || k === "F") $("#bFull").click();
+                    else if (k === "r" || k === "R") go(P.si, 0, { reenter: true });
+                });
+
+                document.addEventListener("visibilitychange", () => {
+                    if (document.hidden) clearTimeout(P.timer);
+                    else schedule();
+                });
+
+                if (location.hash === "#paused") P.playing = false;
+                go(0, 0);
+                window.vybe = { go, P, S, next, prev };
+            }
+
+            if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+            else init();
+        })();
+    </script>
+</body>
+
+</html>
